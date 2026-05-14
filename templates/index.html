@@ -1,0 +1,1459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SWT CAC Builder – Acceptance Criteria Generator</title>
+  <style>
+    /* ------------------------------------------------------------------ */
+    /* Reset & base                                                         */
+    /* ------------------------------------------------------------------ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #F0F4F8;
+      color: #1A2530;
+      min-height: 100vh;
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Header bar                                                           */
+    /* ------------------------------------------------------------------ */
+    header {
+      background: linear-gradient(135deg, #1F4E79 0%, #2E75B6 100%);
+      color: #fff;
+      padding: 16px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    header .brand { display: flex; align-items: center; gap: 12px; }
+    header .brand svg { flex-shrink: 0; }
+    header h1 { font-size: 1.25rem; font-weight: 700; letter-spacing: 0.3px; }
+    header .subtitle { font-size: 0.78rem; opacity: 0.8; margin-top: 1px; }
+
+    #export-bar {
+      display: none;
+      gap: 10px;
+      align-items: center;
+    }
+    #export-bar.visible { display: flex; }
+
+    /* ------------------------------------------------------------------ */
+    /* Layout                                                               */
+    /* ------------------------------------------------------------------ */
+    .page-wrapper {
+      max-width: 1300px;
+      margin: 0 auto;
+      padding: 28px 24px 60px;
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Upload zone                                                          */
+    /* ------------------------------------------------------------------ */
+    #upload-section {
+      background: #fff;
+      border-radius: 12px;
+      border: 2px dashed #B0C8E0;
+      padding: 48px 32px;
+      text-align: center;
+      transition: border-color 0.2s, background 0.2s;
+      cursor: pointer;
+      margin-bottom: 28px;
+    }
+    #upload-section:hover,
+    #upload-section.drag-over { border-color: #2E75B6; background: #EBF4FF; }
+    #upload-section.has-file  { border-color: #70AD47; border-style: solid; background: #F4FBF0; }
+
+    #upload-section .upload-icon { margin-bottom: 16px; }
+    #upload-section h2 { font-size: 1.15rem; color: #1F4E79; margin-bottom: 8px; }
+    #upload-section p  { font-size: 0.88rem; color: #666; }
+    #upload-section p.hint { margin-top: 6px; font-size: 0.8rem; color: #999; }
+
+    #file-input { display: none; }
+
+    .btn-primary {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: #2E75B6; color: #fff;
+      border: none; border-radius: 6px;
+      padding: 10px 22px; font-size: 0.9rem; font-weight: 600;
+      cursor: pointer; transition: background 0.15s, transform 0.1s;
+      text-decoration: none;
+    }
+    .btn-primary:hover { background: #1F4E79; }
+    .btn-primary:active { transform: scale(0.97); }
+    .btn-primary:disabled { background: #A0BDD4; cursor: not-allowed; }
+
+    .btn-success {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: #538135; color: #fff;
+      border: none; border-radius: 6px;
+      padding: 9px 18px; font-size: 0.85rem; font-weight: 600;
+      cursor: pointer; transition: background 0.15s;
+      text-decoration: none;
+    }
+    .btn-success:hover { background: #375623; }
+
+    .btn-outline {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: transparent; color: #2E75B6;
+      border: 1.5px solid #2E75B6; border-radius: 6px;
+      padding: 8px 16px; font-size: 0.83rem; font-weight: 600;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .btn-outline:hover { background: #EBF4FF; }
+
+    /* ------------------------------------------------------------------ */
+    /* Stats bar                                                            */
+    /* ------------------------------------------------------------------ */
+    #stats-bar {
+      display: none;
+      background: #fff;
+      border-radius: 10px;
+      padding: 16px 24px;
+      margin-bottom: 24px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      gap: 0;
+    }
+    #stats-bar.visible { display: flex; flex-wrap: wrap; gap: 8px 0; }
+    .stat-item {
+      flex: 1; min-width: 120px;
+      display: flex; flex-direction: column; align-items: center;
+      padding: 8px 16px;
+      border-right: 1px solid #E8EEF4;
+    }
+    .stat-item:last-child { border-right: none; }
+    .stat-item .val { font-size: 1.6rem; font-weight: 700; color: #1F4E79; }
+    .stat-item .lbl { font-size: 0.72rem; color: #888; text-transform: uppercase;
+                       letter-spacing: 0.5px; margin-top: 2px; }
+
+    /* ------------------------------------------------------------------ */
+    /* Filter / search bar                                                  */
+    /* ------------------------------------------------------------------ */
+    #filter-bar {
+      display: none;
+      background: #fff;
+      border-radius: 10px;
+      padding: 12px 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    #filter-bar.visible { display: flex; }
+
+    #search-input {
+      flex: 1; min-width: 200px;
+      border: 1.5px solid #D0DCE8; border-radius: 6px;
+      padding: 8px 14px; font-size: 0.9rem;
+      outline: none; transition: border-color 0.15s;
+    }
+    #search-input:focus { border-color: #2E75B6; }
+
+    .filter-btn {
+      border: 1.5px solid #D0DCE8; border-radius: 6px;
+      padding: 7px 14px; font-size: 0.82rem; font-weight: 600;
+      cursor: pointer; background: #fff; color: #555;
+      transition: all 0.15s;
+    }
+    .filter-btn.active { background: #2E75B6; color: #fff; border-color: #2E75B6; }
+    .filter-btn:hover:not(.active) { background: #EBF4FF; }
+
+    /* ------------------------------------------------------------------ */
+    /* Results grid                                                         */
+    /* ------------------------------------------------------------------ */
+    #results-section { display: none; }
+    #results-section.visible { display: block; }
+
+    .section-heading {
+      font-size: 1rem; font-weight: 700; color: #1F4E79;
+      text-transform: uppercase; letter-spacing: 0.8px;
+      margin: 24px 0 12px;
+      padding-left: 4px;
+      border-left: 4px solid #2E75B6;
+      padding-left: 10px;
+    }
+
+    .results-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(560px, 1fr));
+      gap: 16px;
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* AC card                                                              */
+    /* ------------------------------------------------------------------ */
+    .ac-card {
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 1px 5px rgba(0,0,0,0.08);
+      border: 1px solid #E0E8F0;
+      overflow: hidden;
+      transition: box-shadow 0.15s;
+    }
+    .ac-card:hover { box-shadow: 0 4px 14px rgba(0,0,0,0.12); }
+    .ac-card.unmatched { opacity: 0.6; border-color: #DDD; }
+
+    .card-header {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      padding: 14px 16px 10px;
+      border-bottom: 1px solid #EDF2F7;
+      background: #F7FAFD;
+      gap: 10px;
+    }
+    .card-header-left { flex: 1; }
+    .card-id {
+      font-size: 0.95rem; font-weight: 700; color: #1F4E79;
+      font-family: 'Consolas', 'Courier New', monospace;
+      margin-bottom: 4px;
+    }
+    .card-desc {
+      font-size: 0.78rem; color: #555; line-height: 1.45;
+      max-height: 60px; overflow: hidden;
+      display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+    }
+    .card-badge {
+      flex-shrink: 0;
+      font-size: 0.7rem; font-weight: 700; padding: 3px 9px;
+      border-radius: 20px; text-transform: uppercase; letter-spacing: 0.4px;
+    }
+    .badge-req  { background: #DEEAF1; color: #1F4E79; }
+    .badge-spec { background: #E2EFDA; color: #375623; }
+    .badge-none { background: #F2F2F2; color: #999; }
+
+    .card-body { padding: 14px 16px; }
+
+    .label-row {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 6px;
+    }
+    .field-label {
+      font-size: 0.72rem; font-weight: 700; color: #888;
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .step-pills { display: flex; flex-wrap: wrap; gap: 4px; }
+    .step-pill {
+      font-size: 0.68rem; background: #EBF4FF; color: #2E75B6;
+      border: 1px solid #C5DDF4; border-radius: 10px;
+      padding: 2px 7px; font-weight: 600;
+    }
+
+    .ac-text-box {
+      background: #F0F7FF;
+      border: 1.5px solid #C5DDF4;
+      border-radius: 7px;
+      padding: 12px 14px;
+      font-size: 0.875rem;
+      line-height: 1.6;
+      color: #1A2530;
+      word-break: break-word;
+      min-height: 56px;
+      margin-bottom: 10px;
+      width: 100%;
+      resize: vertical;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      outline: none;
+      transition: border-color 0.15s, background 0.15s;
+      box-sizing: border-box;
+      cursor: default;
+    }
+    .ac-text-box.editing {
+      background: #EBF5FF;
+      border-color: #2E75B6;
+      cursor: text;
+    }
+    .ac-text-box.unmatched-box {
+      background: #FAF9F6; border-color: #DDD; color: #999; font-style: italic;
+    }
+
+    .card-actions {
+      display: flex; gap: 8px; flex-wrap: wrap;
+      padding: 0 16px 14px;
+    }
+
+    .btn-copy {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: #2E75B6; color: #fff;
+      border: none; border-radius: 5px;
+      padding: 7px 14px; font-size: 0.8rem; font-weight: 600;
+      cursor: pointer; transition: background 0.15s;
+    }
+    .btn-copy:hover  { background: #1F4E79; }
+    .btn-copy.copied { background: #538135; }
+
+    .btn-expand {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: transparent; color: #666;
+      border: 1.5px solid #CCC; border-radius: 5px;
+      padding: 6px 13px; font-size: 0.8rem; font-weight: 600;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .btn-expand:hover { background: #F5F5F5; }
+
+    /* Per-card AI prompt panel */
+    .ai-prompt-panel {
+      display: none;
+      border-top: 1px solid #EDF2F7;
+      padding: 12px 16px 14px;
+      background: #FAFBFF;
+    }
+    .ai-prompt-panel.open { display: block; }
+    .ai-prompt-panel .panel-label {
+      font-size: 0.72rem; font-weight: 700; color: #2E75B6;
+      text-transform: uppercase; letter-spacing: 0.5px;
+      margin-bottom: 7px;
+    }
+    .ai-prompt-input {
+      width: 100%; border: 1.5px solid #C5DDF4; border-radius: 6px;
+      padding: 8px 12px; font-size: 0.85rem; line-height: 1.5;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      resize: vertical; min-height: 52px; outline: none;
+      background: #fff; transition: border-color 0.15s;
+    }
+    .ai-prompt-input:focus { border-color: #2E75B6; }
+    .ai-panel-actions { display: flex; gap: 8px; margin-top: 8px; }
+    .btn-generate-ac {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: #2E75B6; color: #fff; border: none; border-radius: 5px;
+      padding: 7px 16px; font-size: 0.82rem; font-weight: 600;
+      cursor: pointer; transition: background 0.15s;
+    }
+    .btn-generate-ac:hover { background: #1F4E79; }
+    .btn-generate-ac:disabled { background: #A0BDD4; cursor: not-allowed; }
+    .btn-cancel-ai {
+      background: transparent; color: #888; border: 1.5px solid #CCC;
+      border-radius: 5px; padding: 6px 14px; font-size: 0.82rem;
+      font-weight: 600; cursor: pointer; transition: background 0.15s;
+    }
+    .btn-cancel-ai:hover { background: #F5F5F5; }
+    .ai-gen-status { font-size: 0.78rem; color: #888; align-self: center; }
+
+    /* Steps detail panel (collapsible) */
+    .steps-panel {
+      display: none;
+      border-top: 1px solid #EDF2F7;
+      padding: 12px 16px 14px;
+      background: #FAFBFC;
+    }
+    .steps-panel.open { display: block; }
+    .steps-panel .panel-title {
+      font-size: 0.72rem; font-weight: 700; color: #888;
+      text-transform: uppercase; letter-spacing: 0.5px;
+      margin-bottom: 10px;
+    }
+    .step-entry {
+      border: 1px solid #E5EEF5;
+      border-radius: 6px;
+      margin-bottom: 8px;
+      overflow: hidden;
+    }
+    .step-entry-hdr {
+      background: #EFF5FB;
+      padding: 6px 12px;
+      font-size: 0.78rem; font-weight: 700; color: #1F4E79;
+    }
+    .step-entry-body {
+      padding: 8px 12px;
+      font-size: 0.8rem; color: #444; line-height: 1.5;
+    }
+    .step-entry-body strong { color: #1F4E79; display: block; margin-bottom: 2px; }
+
+    /* ------------------------------------------------------------------ */
+    /* Spinner / loader                                                     */
+    /* ------------------------------------------------------------------ */
+    #loader {
+      display: none;
+      text-align: center; padding: 60px 0;
+    }
+    #loader.visible { display: block; }
+    .spinner {
+      width: 48px; height: 48px;
+      border: 5px solid #D0DCE8;
+      border-top-color: #2E75B6;
+      border-radius: 50%;
+      animation: spin 0.75s linear infinite;
+      margin: 0 auto 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #loader p { color: #666; font-size: 0.9rem; }
+
+    /* ------------------------------------------------------------------ */
+    /* Error / warning banners                                              */
+    /* ------------------------------------------------------------------ */
+    .banner {
+      border-radius: 8px; padding: 12px 16px;
+      margin-bottom: 16px; font-size: 0.875rem; line-height: 1.5;
+    }
+    .banner-error   { background: #FFF0F0; border: 1px solid #F5C2C2; color: #8B0000; }
+    .banner-warning { background: #FFF8E6; border: 1px solid #F5DDA0; color: #6B4900; }
+
+    /* ------------------------------------------------------------------ */
+    /* Empty state                                                          */
+    /* ------------------------------------------------------------------ */
+    #empty-state {
+      text-align: center; padding: 60px 0; color: #AAB;
+      display: none;
+    }
+    #empty-state.visible { display: block; }
+    #empty-state p { font-size: 0.9rem; margin-top: 8px; }
+
+    /* ------------------------------------------------------------------ */
+    /* Misc                                                                 */
+    /* ------------------------------------------------------------------ */
+    .hidden { display: none !important; }
+
+    footer {
+      text-align: center; padding: 20px;
+      font-size: 0.75rem; color: #AAB;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ====================================================================== -->
+<!-- Header                                                                  -->
+<!-- ====================================================================== -->
+<header>
+  <div class="brand">
+    <svg width="34" height="34" viewBox="0 0 34 34" fill="none">
+      <rect width="34" height="34" rx="8" fill="rgba(255,255,255,0.15)"/>
+      <path d="M7 10h20M7 17h14M7 24h17" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/>
+      <circle cx="26" cy="24" r="5" fill="#70AD47"/>
+      <path d="M23.5 24l1.5 1.5 3-3" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <div>
+      <div style="font-size:0.72rem;opacity:0.75;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:1px">Software Testing</div>
+      <h1>Test Case AC Builder</h1>
+    </div>
+  </div>
+
+  <!-- AI badge: always visible -->
+  <span id="ai-badge" style="
+    display:inline-flex;align-items:center;gap:5px;
+    font-size:0.75rem;font-weight:600;padding:5px 11px;
+    border-radius:20px;border:1.5px solid rgba(255,255,255,0.35);
+    color:#fff;opacity:0.9;cursor:pointer;" title="Click to configure Glean AI">
+    <span id="ai-dot" style="width:8px;height:8px;border-radius:50%;background:#999;flex-shrink:0"></span>
+    <span id="ai-label">Checking AI…</span>
+  </span>
+
+  <!-- Export + re-run controls: only shown after a document is loaded -->
+  <div id="export-bar">
+    <div style="width:1px;height:24px;background:rgba(255,255,255,0.25);margin:0 4px"></div>
+
+    <button id="btn-regen" onclick="regenerateWithAI()" title="Re-run AI generation on all items" style="
+      display:inline-flex;align-items:center;gap:6px;
+      background:rgba(255,255,255,0.15);color:#fff;
+      border:1.5px solid rgba(255,255,255,0.35);border-radius:6px;
+      padding:7px 14px;font-size:0.8rem;font-weight:600;
+      cursor:pointer;transition:background 0.15s;">
+      <svg width="13" height="13" fill="none" viewBox="0 0 16 16">
+        <path d="M13.5 8A5.5 5.5 0 112.5 5.5" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round"/>
+        <path d="M2.5 2v3.5H6" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round"/>
+      </svg>
+      Re-run AI
+    </button>
+
+    <div style="width:1px;height:24px;background:rgba(255,255,255,0.25);margin:0 4px"></div>
+
+    <button onclick="triggerExport('excel')" class="btn-success" id="btn-export-excel">
+      <svg width="15" height="15" fill="none" viewBox="0 0 16 16">
+        <rect x="1" y="1" width="14" height="14" rx="2" fill="#217346"/>
+        <path d="M4 5l2.5 3L4 11h1.5L8 8.5 10.5 11H12L9.5 8l2.5-3H10.5L8 7.5 5.5 5H4z" fill="#fff"/>
+      </svg>
+      Export Excel
+    </button>
+    <button onclick="triggerExport('docx')" id="btn-export-docx" style="
+      display:inline-flex;align-items:center;gap:6px;
+      background:rgba(255,255,255,0.15);color:#fff;
+      border:1.5px solid rgba(255,255,255,0.5);border-radius:6px;
+      padding:9px 18px;font-size:0.85rem;font-weight:600;
+      cursor:pointer;transition:background 0.15s;">
+      <svg width="15" height="15" fill="none" viewBox="0 0 16 16">
+        <rect x="1" y="1" width="14" height="14" rx="2" fill="#2B579A"/>
+        <path d="M5 5h6M5 8h6M5 11h4" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      Export Word
+    </button>
+  </div>
+
+  <!-- Glean configuration modal -->
+  <div id="api-modal" style="
+    display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);
+    z-index:999;align-items:center;justify-content:center;">
+    <div style="background:#fff;border-radius:12px;padding:28px 32px;
+                max-width:500px;width:90%;box-shadow:0 8px 40px rgba(0,0,0,0.25);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <h3 style="font-size:1.05rem;color:#1F4E79">Glean AI Configuration</h3>
+        <button onclick="closeGleanModal()"
+          style="background:none;border:none;cursor:pointer;color:#999;font-size:1.3rem;line-height:1;padding:2px 6px"
+          title="Close">&times;</button>
+      </div>
+      <p style="font-size:0.84rem;color:#555;margin-bottom:20px;line-height:1.5">
+        Configure your Glean service to enable AI-powered AC synthesis.
+        Without configuration the app uses rule-based extraction.<br>
+        <span style="font-size:0.78rem;color:#888">Settings are stored in memory for this session only.</span>
+      </p>
+
+      <label style="display:block;font-size:0.78rem;font-weight:700;color:#555;
+                    text-transform:uppercase;letter-spacing:0.4px;margin-bottom:5px">
+        Glean Service URL
+      </label>
+      <input id="glean-url-input" type="url"
+        placeholder="https://your-company.glean.com"
+        style="width:100%;border:1.5px solid #C5D8E8;border-radius:6px;
+               padding:9px 12px;font-size:0.9rem;outline:none;margin-bottom:14px;
+               transition:border-color 0.15s;"
+        onfocus="this.style.borderColor='#2E75B6'" onblur="this.style.borderColor='#C5D8E8'"
+      />
+
+      <label style="display:block;font-size:0.78rem;font-weight:700;color:#555;
+                    text-transform:uppercase;letter-spacing:0.4px;margin-bottom:5px">
+        API Key
+      </label>
+      <input id="glean-key-input" type="password"
+        placeholder="Glean API key…"
+        style="width:100%;border:1.5px solid #C5D8E8;border-radius:6px;
+               padding:9px 12px;font-size:0.9rem;font-family:monospace;
+               outline:none;margin-bottom:6px;transition:border-color 0.15s;"
+        onfocus="this.style.borderColor='#2E75B6'" onblur="this.style.borderColor='#C5D8E8'"
+      />
+
+      <p id="glean-config-msg" style="font-size:0.82rem;min-height:1.2em;margin-bottom:14px;color:#538135"></p>
+
+      <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap">
+        <button id="btn-test-conn" onclick="testGleanConnection()"
+          style="border:1.5px solid #2E75B6;background:#fff;color:#2E75B6;border-radius:6px;
+                 padding:8px 18px;cursor:pointer;font-size:0.85rem;font-weight:600;
+                 transition:background 0.15s;"
+          onmouseover="this.style.background='#EBF4FF'" onmouseout="this.style.background='#fff'">
+          Test Connection
+        </button>
+        <button onclick="closeGleanModal()"
+          style="border:1.5px solid #CCC;background:#fff;border-radius:6px;
+                 padding:8px 18px;cursor:pointer;font-size:0.85rem">Cancel</button>
+        <button id="btn-save-config" class="btn-primary" onclick="saveGleanConfig()"
+          style="padding:8px 20px">Save Configuration</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ====================================================================== -->
+<!-- Page content                                                            -->
+<!-- ====================================================================== -->
+<div class="page-wrapper">
+
+  <!-- Upload zone -->
+  <div id="upload-section" role="button" tabindex="0" aria-label="Upload .docx file">
+    <div class="upload-icon">
+      <svg width="52" height="52" fill="none" viewBox="0 0 52 52">
+        <circle cx="26" cy="26" r="26" fill="#EBF4FF"/>
+        <path d="M26 34V20M20 26l6-6 6 6" stroke="#2E75B6" stroke-width="2.5"
+              stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M18 36h16" stroke="#2E75B6" stroke-width="2.5" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <h2 id="upload-title">Drop your test case document here</h2>
+    <p id="upload-subtitle">or click to browse for a <strong>.docx</strong> file</p>
+    <p class="hint" id="upload-hint">
+      Supports Word test-case documents with Requirement/Specification tables
+      and a Section&nbsp;9 Test Procedure table
+    </p>
+    <input type="file" id="file-input" accept=".docx" />
+  </div>
+
+  <!-- Notifications area -->
+  <div id="notifications"></div>
+
+  <!-- Loader -->
+  <div id="loader">
+    <div class="spinner"></div>
+    <p>Parsing document and generating acceptance criteria…</p>
+  </div>
+
+  <!-- Stats bar -->
+  <div id="stats-bar">
+    <div class="stat-item"><span class="val" id="stat-reqs">0</span><span class="lbl">Requirements</span></div>
+    <div class="stat-item"><span class="val" id="stat-specs">0</span><span class="lbl">Specifications</span></div>
+    <div class="stat-item"><span class="val" id="stat-steps">0</span><span class="lbl">Test Steps</span></div>
+    <div class="stat-item"><span class="val" id="stat-matched">0</span><span class="lbl">Matched</span></div>
+    <div class="stat-item"><span class="val" id="stat-unmatched">0</span><span class="lbl">Unmatched</span></div>
+  </div>
+
+  <!-- Filter / search bar -->
+  <div id="filter-bar">
+    <input type="search" id="search-input" placeholder="Search by ID or keyword…" />
+    <button class="filter-btn active" data-filter="all">All</button>
+    <button class="filter-btn" data-filter="Requirement">Requirements</button>
+    <button class="filter-btn" data-filter="Specification">Specifications</button>
+    <button class="filter-btn" data-filter="matched">Matched only</button>
+    <button class="filter-btn" data-filter="unmatched">Unmatched only</button>
+  </div>
+
+  <!-- Results area -->
+  <div id="results-section">
+    <div id="req-heading" class="section-heading hidden">Requirements</div>
+    <div class="results-grid" id="req-grid"></div>
+    <div id="spec-heading" class="section-heading hidden">Specifications</div>
+    <div class="results-grid" id="spec-grid"></div>
+  </div>
+
+  <!-- Empty state -->
+  <div id="empty-state">
+    <svg width="48" height="48" fill="none" viewBox="0 0 48 48">
+      <circle cx="24" cy="24" r="24" fill="#F0F4F8"/>
+      <path d="M16 28h16M16 20h10" stroke="#C0CBD6" stroke-width="2.5" stroke-linecap="round"/>
+    </svg>
+    <p>No results match the current filter.</p>
+  </div>
+
+</div>
+
+<footer>SWT CAC Builder &nbsp;·&nbsp; python-docx parser &nbsp;·&nbsp; For internal use only</footer>
+
+<!-- ====================================================================== -->
+<!-- JavaScript                                                              -->
+<!-- ====================================================================== -->
+<script>
+// ---------------------------------------------------------------------------
+// Export
+// ---------------------------------------------------------------------------
+function triggerExport(format) {
+  if (!Object.keys(_allResults).length) {
+    showError('No results to export. Please upload a document first.');
+    return;
+  }
+  const url = format === 'excel' ? '/export/excel' : '/export/docx';
+  const btn = document.getElementById(format === 'excel' ? 'btn-export-excel' : 'btn-export-docx');
+  const origHtml = btn.innerHTML;
+  btn.disabled = true;
+  btn.style.opacity = '0.6';
+
+  fetch(url)
+    .then(resp => {
+      if (!resp.ok) {
+        return resp.json().then(d => { throw new Error(d.error || 'Export failed.'); });
+      }
+      // Extract filename from Content-Disposition header if present
+      const cd = resp.headers.get('Content-Disposition') || '';
+      const match = cd.match(/filename[^;=\n]*=["']?([^"';\n]+)/);
+      const filename = match ? match[1].trim() : (format === 'excel' ? 'acceptance_criteria.xlsx' : 'acceptance_criteria.docx');
+      return resp.blob().then(blob => ({ blob, filename }));
+    })
+    .then(({ blob, filename }) => {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+    })
+    .catch(err => showError(err.message))
+    .finally(() => {
+      btn.disabled = false;
+      btn.style.opacity = '';
+      btn.innerHTML = origHtml;
+    });
+}
+
+// ---------------------------------------------------------------------------
+// AI status & Glean config modal
+// ---------------------------------------------------------------------------
+let _savedGleanConfig = { url: '', api_key: '' };
+
+function refreshAiStatus() {
+  fetch('/ai-status')
+    .then(r => r.json())
+    .then(d => {
+      const dot   = document.getElementById('ai-dot');
+      const label = document.getElementById('ai-label');
+      if (d.ai_active) {
+        dot.style.background = '#70AD47';
+        label.textContent    = 'AI Synthesis ON';
+        document.getElementById('ai-badge').title = 'Glean AI active – click to reconfigure';
+      } else {
+        dot.style.background = '#F4A460';
+        label.textContent    = 'AI: Not configured';
+        document.getElementById('ai-badge').title = 'Click to configure Glean AI';
+      }
+      _savedGleanConfig = { url: d.glean_url || '', api_key: d.api_key || '' };
+    })
+    .catch(() => {});
+}
+
+function openGleanModal() {
+  document.getElementById('glean-url-input').value = _savedGleanConfig.url;
+  document.getElementById('glean-key-input').value = _savedGleanConfig.api_key;
+  document.getElementById('glean-config-msg').textContent = '';
+  document.getElementById('api-modal').style.display = 'flex';
+}
+
+function closeGleanModal() {
+  document.getElementById('api-modal').style.display = 'none';
+}
+
+function setModalMsg(text, isError) {
+  const msg = document.getElementById('glean-config-msg');
+  msg.textContent = text;
+  msg.style.color = isError ? '#C00' : '#538135';
+}
+
+function testGleanConnection() {
+  const url = document.getElementById('glean-url-input').value.trim();
+  const key = document.getElementById('glean-key-input').value.trim();
+
+  if (!url || !key) {
+    setModalMsg('Please enter both the service URL and API key before testing.', true);
+    return;
+  }
+
+  // Save first so the backend has the values, then test
+  const btn = document.getElementById('btn-test-conn');
+  btn.disabled = true;
+  btn.textContent = 'Testing…';
+
+  fetch('/configure', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({url, api_key: key}),
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (!d.success) {
+      setModalMsg(d.error || 'Could not save config.', true);
+      btn.disabled = false;
+      btn.textContent = 'Test Connection';
+      return;
+    }
+    return fetch('/test-connection', {method: 'POST'}).then(r => r.json());
+  })
+  .then(d => {
+    if (!d) return;
+    setModalMsg(d.message, !d.ok);
+    btn.disabled = false;
+    btn.textContent = 'Test Connection';
+    if (d.ok) refreshAiStatus();
+  })
+  .catch(err => {
+    setModalMsg(`Request failed: ${err.message}`, true);
+    btn.disabled = false;
+    btn.textContent = 'Test Connection';
+  });
+}
+
+function saveGleanConfig() {
+  const url = document.getElementById('glean-url-input').value.trim();
+  const key = document.getElementById('glean-key-input').value.trim();
+
+  if (!url) { setModalMsg('Glean service URL is required.', true); return; }
+  if (!key) { setModalMsg('API key is required.', true); return; }
+
+  const btn = document.getElementById('btn-save-config');
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+
+  fetch('/configure', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({url, api_key: key}),
+  })
+  .then(r => r.json())
+  .then(d => {
+    btn.disabled = false;
+    btn.textContent = 'Save Configuration';
+    setModalMsg(d.message || (d.success ? 'Saved.' : d.error), !d.success);
+    if (d.success) {
+      refreshAiStatus();
+      setTimeout(closeGleanModal, 1200);
+    }
+  })
+  .catch(err => {
+    btn.disabled = false;
+    btn.textContent = 'Save Configuration';
+    setModalMsg(`Request failed: ${err.message}`, true);
+  });
+}
+
+document.getElementById('ai-badge').addEventListener('click', openGleanModal);
+
+// Close modal on backdrop click
+document.getElementById('api-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('api-modal')) closeGleanModal();
+});
+
+// Check AI status on load
+refreshAiStatus();
+
+// ---------------------------------------------------------------------------
+// State
+// ---------------------------------------------------------------------------
+let _allResults = {};   // raw results from /upload
+let _activeFilter = 'all';
+let _searchQuery   = '';
+
+// ---------------------------------------------------------------------------
+// DOM refs
+// ---------------------------------------------------------------------------
+const uploadSection = document.getElementById('upload-section');
+const fileInput     = document.getElementById('file-input');
+const notifications = document.getElementById('notifications');
+const loader        = document.getElementById('loader');
+const statsBar      = document.getElementById('stats-bar');
+const filterBar     = document.getElementById('filter-bar');
+const resultsSection= document.getElementById('results-section');
+const emptyState    = document.getElementById('empty-state');
+const exportBar     = document.getElementById('export-bar');
+const searchInput   = document.getElementById('search-input');
+const reqGrid       = document.getElementById('req-grid');
+const specGrid      = document.getElementById('spec-grid');
+const reqHeading    = document.getElementById('req-heading');
+const specHeading   = document.getElementById('spec-heading');
+
+// ---------------------------------------------------------------------------
+// Upload handling
+// ---------------------------------------------------------------------------
+uploadSection.addEventListener('click', () => fileInput.click());
+uploadSection.addEventListener('keydown', e => {
+  if (e.key === 'Enter' || e.key === ' ') fileInput.click();
+});
+
+uploadSection.addEventListener('dragover', e => {
+  e.preventDefault();
+  uploadSection.classList.add('drag-over');
+});
+uploadSection.addEventListener('dragleave', () => uploadSection.classList.remove('drag-over'));
+uploadSection.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadSection.classList.remove('drag-over');
+  const files = e.dataTransfer.files;
+  if (files.length) processFile(files[0]);
+});
+
+fileInput.addEventListener('change', () => {
+  if (fileInput.files.length) processFile(fileInput.files[0]);
+});
+
+function processFile(file) {
+  if (!file.name.toLowerCase().endsWith('.docx')) {
+    showError('Only .docx files are supported.');
+    return;
+  }
+
+  // Update upload zone appearance
+  uploadSection.classList.add('has-file');
+  document.getElementById('upload-title').textContent = file.name;
+  document.getElementById('upload-subtitle').textContent = 'Processing…';
+  document.getElementById('upload-hint').textContent =
+    `${(file.size / 1024).toFixed(1)} KB · Click or drop a different file to replace`;
+
+  // Clear previous state
+  notifications.innerHTML = '';
+  statsBar.classList.remove('visible');
+  filterBar.classList.remove('visible');
+  resultsSection.classList.remove('visible');
+  emptyState.classList.remove('visible');
+  exportBar.classList.remove('visible');
+  reqGrid.innerHTML = '';
+  specGrid.innerHTML = '';
+
+  // Show loader
+  loader.classList.add('visible');
+
+  const formData = new FormData();
+  formData.append('file', file);
+
+  fetch('/upload', { method: 'POST', body: formData })
+    .then(r => r.json())
+    .then(data => {
+      loader.classList.remove('visible');
+      if (data.success) {
+        onSuccess(data);
+      } else {
+        onError(data.errors || ['Unknown error'], data.warnings || []);
+      }
+    })
+    .catch(err => {
+      loader.classList.remove('visible');
+      onError([`Network error: ${err.message}`], []);
+    });
+}
+
+function onSuccess(data) {
+  document.getElementById('upload-subtitle').textContent =
+    'Parsed successfully · Click or drop to load a different file';
+
+  // Show warnings
+  (data.warnings || []).forEach(w => showWarning(w));
+
+  // Update stats
+  const s = data.stats;
+  document.getElementById('stat-reqs').textContent     = s.requirements;
+  document.getElementById('stat-specs').textContent    = s.specifications;
+  document.getElementById('stat-steps').textContent    = s.procedure_steps;
+  document.getElementById('stat-matched').textContent  = s.matched;
+  document.getElementById('stat-unmatched').textContent= s.unmatched;
+  statsBar.classList.add('visible');
+
+  // Store results and render
+  _allResults = data.results;
+  filterBar.classList.add('visible');
+  resultsSection.classList.add('visible');
+  exportBar.classList.add('visible');
+  renderResults();
+}
+
+function onError(errors, warnings) {
+  document.getElementById('upload-subtitle').textContent =
+    'Error – click or drop to try again';
+  uploadSection.classList.remove('has-file');
+  errors.forEach(e => showError(e));
+  warnings.forEach(w => showWarning(w));
+}
+
+// ---------------------------------------------------------------------------
+// Render results
+// ---------------------------------------------------------------------------
+function renderResults() {
+  const query = _searchQuery.toLowerCase();
+
+  const reqItems  = [];
+  const specItems = [];
+
+  for (const [num, item] of Object.entries(_allResults)) {
+    // Apply type filter
+    if (_activeFilter === 'Requirement'   && item.item_type !== 'Requirement')   continue;
+    if (_activeFilter === 'Specification' && item.item_type !== 'Specification') continue;
+    if (_activeFilter === 'matched'   && item.unmatched)   continue;
+    if (_activeFilter === 'unmatched' && !item.unmatched)  continue;
+
+    // Apply search filter
+    if (query) {
+      const haystack = [num, item.description, item.generated_ac, item.existing_ac]
+                         .join(' ').toLowerCase();
+      if (!haystack.includes(query)) continue;
+    }
+
+    if (item.item_type === 'Requirement')   reqItems.push([num, item]);
+    else                                     specItems.push([num, item]);
+  }
+
+  reqGrid.innerHTML  = '';
+  specGrid.innerHTML = '';
+
+  if (reqItems.length) {
+    reqHeading.classList.remove('hidden');
+    reqItems.forEach(([num, item]) => reqGrid.appendChild(buildCard(num, item)));
+  } else {
+    reqHeading.classList.add('hidden');
+  }
+
+  if (specItems.length) {
+    specHeading.classList.remove('hidden');
+    specItems.forEach(([num, item]) => specGrid.appendChild(buildCard(num, item)));
+  } else {
+    specHeading.classList.add('hidden');
+  }
+
+  const total = reqItems.length + specItems.length;
+  emptyState.classList.toggle('visible', total === 0);
+}
+
+// ---------------------------------------------------------------------------
+// Build a single AC card
+// ---------------------------------------------------------------------------
+function buildCard(num, item) {
+  const card = document.createElement('div');
+  card.className = 'ac-card' + (item.unmatched ? ' unmatched' : '');
+  card.dataset.id = num;
+
+  const badgeClass = item.item_type === 'Requirement' ? 'badge-req'
+                   : item.item_type === 'Specification' ? 'badge-spec'
+                   : 'badge-none';
+  const badgeLabel = item.item_type === 'Requirement' ? 'REQ' : 'SPEC';
+
+  const stepsHtml = item.matching_steps.length
+    ? item.matching_steps.map(s =>
+        `<span class="step-pill">Step ${escHtml(s.step_id)}</span>`
+      ).join('')
+    : '<span style="font-size:0.75rem;color:#999">None found</span>';
+
+  const acText = item.generated_ac || '';
+  const acPlaceholder = item.unmatched
+    ? 'No matching test steps found — enter acceptance criteria manually.'
+    : 'Generating…';
+  const acBoxClass = 'ac-text-box' + (item.unmatched ? ' unmatched-box' : '');
+
+  // Build steps detail HTML
+  let stepsDetailHtml = '';
+  if (item.matching_steps.length) {
+    stepsDetailHtml = `<div class="panel-title">Matched Test Steps</div>`;
+    item.matching_steps.forEach(s => {
+      stepsDetailHtml += `
+        <div class="step-entry">
+          <div class="step-entry-hdr">Step ${escHtml(s.step_id)}</div>
+          <div class="step-entry-body">
+            <strong>Description</strong>${escHtml(s.description)}
+            <strong style="margin-top:6px">Expected Result</strong>${escHtml(s.expected_result)}
+          </div>
+        </div>`;
+    });
+  }
+
+  card.innerHTML = `
+    <div class="card-header">
+      <div class="card-header-left">
+        <div class="card-id">${escHtml(num)}</div>
+        <div class="card-desc" title="${escHtml(item.description)}">${escHtml(item.description)}</div>
+      </div>
+      <span class="card-badge ${badgeClass}">${badgeLabel}</span>
+    </div>
+
+    <div class="card-body">
+      <div class="label-row">
+        <span class="field-label">Acceptance Criteria
+          <span style="font-size:0.68rem;font-weight:400;color:#AAA;text-transform:none;
+                       letter-spacing:0;margin-left:5px">— click to edit</span>
+        </span>
+        ${item.ai_generated
+          ? `<span class="ac-source-badge" style="font-size:0.68rem;font-weight:700;padding:2px 8px;
+               border-radius:10px;background:#E8F5E9;color:#2E7D32;
+               border:1px solid #A5D6A7;letter-spacing:0.3px">✦ AI</span>`
+          : `<span class="ac-source-badge" style="font-size:0.68rem;color:#AAA;padding:2px 6px">rule-based</span>`
+        }
+      </div>
+      <textarea class="${acBoxClass}" id="ac-${escHtml(num)}"
+        rows="3" placeholder="${escHtml(acPlaceholder)}"
+        spellcheck="true" readonly>${escHtml(acText)}</textarea>
+
+      <div class="label-row" style="margin-top:4px">
+        <span class="field-label">Verified by</span>
+        <div class="step-pills">${stepsHtml}</div>
+      </div>
+    </div>
+
+    <div class="card-actions">
+      <button class="btn-copy" data-target="ac-${escHtml(num)}" title="Copy to clipboard">
+        <svg width="13" height="13" fill="none" viewBox="0 0 16 16">
+          <rect x="5" y="5" width="9" height="9" rx="1.5" stroke="currentColor" stroke-width="1.6"/>
+          <path d="M11 5V3.5A1.5 1.5 0 009.5 2H3.5A1.5 1.5 0 002 3.5v6A1.5 1.5 0 003.5 11H5"
+                stroke="currentColor" stroke-width="1.6"/>
+        </svg>
+        Copy AC
+      </button>
+      <button class="btn-edit-save" data-num="${escHtml(num)}" data-mode="edit" style="
+        display:inline-flex;align-items:center;gap:5px;
+        background:transparent;color:#2E75B6;
+        border:1.5px solid #2E75B6;border-radius:5px;
+        padding:6px 13px;font-size:0.8rem;font-weight:600;
+        cursor:pointer;transition:background 0.15s,color 0.15s,border-color 0.15s;">
+        <svg width="12" height="12" fill="none" viewBox="0 0 14 14">
+          <path d="M9.5 2.5l2 2L4 12H2v-2L9.5 2.5z" stroke="currentColor" stroke-width="1.6"
+                stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Edit
+      </button>
+      <button class="btn-ai-regen" data-num="${escHtml(num)}" title="Generate AC with AI" style="
+        display:inline-flex;align-items:center;gap:5px;
+        background:transparent;color:#F0A500;
+        border:1.5px solid #F0A500;border-radius:5px;
+        padding:6px 13px;font-size:0.8rem;font-weight:600;
+        cursor:pointer;transition:background 0.15s,color 0.15s;margin-left:auto;">
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+          <path d="M8 1v3M8 12v3M1 8h3M12 8h3M3.22 3.22l2.12 2.12M10.66 10.66l2.12 2.12M3.22 12.78l2.12-2.12M10.66 5.34l2.12-2.12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+        Generate with AI
+      </button>
+      ${stepsDetailHtml ? `
+      <button class="btn-expand" data-card="${escHtml(num)}">
+        <svg width="12" height="12" fill="none" viewBox="0 0 12 12">
+          <path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+        Show Steps
+      </button>` : ''}
+    </div>
+
+    <div class="ai-prompt-panel" id="aipanel-${escHtml(num)}">
+      <div class="panel-label">
+        <svg width="11" height="11" viewBox="0 0 16 16" fill="none" style="margin-right:4px;vertical-align:-1px">
+          <path d="M8 1v3M8 12v3M1 8h3M12 8h3M3.22 3.22l2.12 2.12M10.66 10.66l2.12 2.12M3.22 12.78l2.12-2.12M10.66 5.34l2.12-2.12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+        AI Prompt — optional guidance
+      </div>
+      <textarea class="ai-prompt-input" id="aiprompt-${escHtml(num)}"
+        placeholder="Leave blank to generate from test evidence only, or add specific guidance — e.g. 'focus on timing constraints' or 'emphasise the safety interlock condition'…"
+        rows="2"></textarea>
+      <div class="ai-panel-actions">
+        <button class="btn-generate-ac" data-num="${escHtml(num)}">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+            <path d="M8 1v3M8 12v3M1 8h3M12 8h3M3.22 3.22l2.12 2.12M10.66 10.66l2.12 2.12M3.22 12.78l2.12-2.12M10.66 5.34l2.12-2.12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+          Generate
+        </button>
+        <button class="btn-cancel-ai" data-num="${escHtml(num)}">Cancel</button>
+        <span class="ai-gen-status" id="aistatus-${escHtml(num)}"></span>
+      </div>
+    </div>
+
+    ${stepsDetailHtml ? `
+    <div class="steps-panel" id="steps-${escHtml(num)}">
+      ${stepsDetailHtml}
+    </div>` : ''}
+  `;
+
+  // Wire Edit / Save toggle
+  const acArea     = card.querySelector(`#ac-${CSS.escape(num)}`);
+  const editSaveBtn = card.querySelector('.btn-edit-save');
+
+  if (acArea && editSaveBtn) {
+    function enterEditMode() {
+      acArea.readOnly = false;
+      acArea.classList.add('editing');
+      acArea.focus();
+      // Move caret to end
+      acArea.setSelectionRange(acArea.value.length, acArea.value.length);
+      editSaveBtn.dataset.mode = 'save';
+      editSaveBtn.style.background    = '#538135';
+      editSaveBtn.style.color         = '#fff';
+      editSaveBtn.style.borderColor   = '#538135';
+      editSaveBtn.innerHTML = `
+        <svg width="12" height="12" fill="none" viewBox="0 0 14 14">
+          <path d="M2 7.5l3.5 3.5 6.5-7" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Save`;
+    }
+
+    function enterReadMode(saved) {
+      acArea.readOnly = true;
+      acArea.classList.remove('editing');
+      editSaveBtn.dataset.mode = 'edit';
+      editSaveBtn.style.background  = 'transparent';
+      editSaveBtn.style.color       = saved ? '#538135' : '#2E75B6';
+      editSaveBtn.style.borderColor = saved ? '#538135' : '#2E75B6';
+      editSaveBtn.innerHTML = saved
+        ? `<svg width="12" height="12" fill="none" viewBox="0 0 14 14">
+             <path d="M2 7.5l3.5 3.5 6.5-7" stroke="currentColor" stroke-width="2"
+                   stroke-linecap="round" stroke-linejoin="round"/>
+           </svg> Saved`
+        : `<svg width="12" height="12" fill="none" viewBox="0 0 14 14">
+             <path d="M9.5 2.5l2 2L4 12H2v-2L9.5 2.5z" stroke="currentColor" stroke-width="1.6"
+                   stroke-linecap="round" stroke-linejoin="round"/>
+           </svg> Edit`;
+      if (saved) {
+        setTimeout(() => {
+          editSaveBtn.style.color       = '#2E75B6';
+          editSaveBtn.style.borderColor = '#2E75B6';
+          editSaveBtn.innerHTML = `
+            <svg width="12" height="12" fill="none" viewBox="0 0 14 14">
+              <path d="M9.5 2.5l2 2L4 12H2v-2L9.5 2.5z" stroke="currentColor" stroke-width="1.6"
+                    stroke-linecap="round" stroke-linejoin="round"/>
+            </svg> Edit`;
+        }, 2000);
+      }
+    }
+
+    editSaveBtn.addEventListener('click', () => {
+      if (editSaveBtn.dataset.mode === 'edit') {
+        enterEditMode();
+      } else {
+        const text = acArea.value;
+        _allResults[num].generated_ac = text;
+        editSaveBtn.disabled = true;
+        fetch('/save-edit', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({number: num, text}),
+        })
+        .then(() => { editSaveBtn.disabled = false; enterReadMode(true); })
+        .catch(() => { editSaveBtn.disabled = false; enterReadMode(true); });
+      }
+    });
+  }
+
+  // Wire copy button
+  const copyBtn = card.querySelector('.btn-copy');
+  if (copyBtn) {
+    copyBtn.addEventListener('click', () => {
+      const targetId = copyBtn.dataset.target;
+      const el       = document.getElementById(targetId);
+      const text     = el ? (el.value ?? el.textContent) : '';
+      navigator.clipboard.writeText(text).then(() => {
+        copyBtn.classList.add('copied');
+        copyBtn.innerHTML = `
+          <svg width="13" height="13" fill="none" viewBox="0 0 16 16">
+            <path d="M3 8l4 4 6-7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          Copied!`;
+        setTimeout(() => {
+          copyBtn.classList.remove('copied');
+          copyBtn.innerHTML = `
+            <svg width="13" height="13" fill="none" viewBox="0 0 16 16">
+              <rect x="5" y="5" width="9" height="9" rx="1.5" stroke="currentColor" stroke-width="1.6"/>
+              <path d="M11 5V3.5A1.5 1.5 0 009.5 2H3.5A1.5 1.5 0 002 3.5v6A1.5 1.5 0 003.5 11H5"
+                    stroke="currentColor" stroke-width="1.6"/>
+            </svg>
+            Copy AC`;
+        }, 2000);
+      }).catch(() => {
+        // Fallback for HTTP (non-HTTPS) environments
+        const el2 = document.getElementById(targetId);
+        if (el2 && el2.tagName === 'TEXTAREA') {
+          el2.select();
+          document.execCommand('copy');
+          el2.blur();
+        }
+      });
+    });
+  }
+
+  // Wire expand button
+  const expandBtn = card.querySelector('.btn-expand');
+  if (expandBtn) {
+    expandBtn.addEventListener('click', () => {
+      const panel = document.getElementById(`steps-${expandBtn.dataset.card}`);
+      const open  = panel.classList.toggle('open');
+      expandBtn.innerHTML = open
+        ? `<svg width="12" height="12" fill="none" viewBox="0 0 12 12">
+             <path d="M2 8l4-4 4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+           </svg> Hide Steps`
+        : `<svg width="12" height="12" fill="none" viewBox="0 0 12 12">
+             <path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+           </svg> Show Steps`;
+    });
+  }
+
+  // Wire per-card AI generate panel
+  const aiRegenBtn  = card.querySelector('.btn-ai-regen');
+  const aiPanel     = card.querySelector(`#aipanel-${CSS.escape(num)}`);
+  const generateBtn = card.querySelector('.btn-generate-ac');
+  const cancelAiBtn = card.querySelector('.btn-cancel-ai');
+  const aiStatus    = card.querySelector(`#aistatus-${CSS.escape(num)}`);
+  const promptInput = card.querySelector(`#aiprompt-${CSS.escape(num)}`);
+
+  if (aiRegenBtn && aiPanel) {
+    aiRegenBtn.addEventListener('click', () => {
+      const isOpen = aiPanel.classList.toggle('open');
+      aiRegenBtn.style.background = isOpen ? '#F0A500' : 'transparent';
+      aiRegenBtn.style.color      = isOpen ? '#fff'    : '#F0A500';
+      if (isOpen && promptInput) promptInput.focus();
+    });
+  }
+
+  if (cancelAiBtn && aiPanel) {
+    cancelAiBtn.addEventListener('click', () => {
+      aiPanel.classList.remove('open');
+      if (aiRegenBtn) {
+        aiRegenBtn.style.background = 'transparent';
+        aiRegenBtn.style.color      = '#F0A500';
+      }
+      if (aiStatus) aiStatus.textContent = '';
+    });
+  }
+
+  if (generateBtn) {
+    generateBtn.addEventListener('click', () => {
+      const customPrompt = promptInput ? promptInput.value.trim() : '';
+      generateBtn.disabled = true;
+      generateBtn.innerHTML = `
+        <svg width="12" height="12" viewBox="0 0 14 14" fill="none"
+             style="animation:spin 0.75s linear infinite">
+          <circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="2" stroke-dasharray="20 14"/>
+        </svg> Generating…`;
+      if (aiStatus) aiStatus.textContent = '';
+
+      fetch('/regenerate-single', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({number: num, custom_prompt: customPrompt}),
+      })
+      .then(r => r.json())
+      .then(data => {
+        generateBtn.disabled = false;
+        generateBtn.innerHTML = `
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+            <path d="M8 1v3M8 12v3M1 8h3M12 8h3M3.22 3.22l2.12 2.12M10.66 10.66l2.12 2.12M3.22 12.78l2.12-2.12M10.66 5.34l2.12-2.12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          </svg> Generate`;
+
+        if (!data.success) {
+          if (aiStatus) { aiStatus.textContent = data.error || 'Generation failed.'; aiStatus.style.color = '#C00'; }
+          return;
+        }
+
+        // Update textarea and in-memory state
+        if (acArea) {
+          acArea.value = data.generated_ac || '';
+          acArea.readOnly = true;
+          acArea.classList.remove('editing');
+        }
+        _allResults[num].generated_ac = data.generated_ac || '';
+        _allResults[num].ai_generated = data.ai_generated;
+
+        // Update AI badge on card
+        const badgeEl = card.querySelector('.ac-source-badge');
+        if (badgeEl) {
+          badgeEl.textContent   = data.ai_generated ? '✦ AI' : 'rule-based';
+          badgeEl.style.background   = data.ai_generated ? '#E8F5E9' : 'transparent';
+          badgeEl.style.color        = data.ai_generated ? '#2E7D32' : '#AAA';
+          badgeEl.style.border       = data.ai_generated ? '1px solid #A5D6A7' : 'none';
+        }
+
+        // Reset edit/save button to Edit mode
+        if (editSaveBtn) {
+          editSaveBtn.dataset.mode      = 'edit';
+          editSaveBtn.style.background  = 'transparent';
+          editSaveBtn.style.color       = '#2E75B6';
+          editSaveBtn.style.borderColor = '#2E75B6';
+          editSaveBtn.innerHTML = `
+            <svg width="12" height="12" fill="none" viewBox="0 0 14 14">
+              <path d="M9.5 2.5l2 2L4 12H2v-2L9.5 2.5z" stroke="currentColor" stroke-width="1.6"
+                    stroke-linecap="round" stroke-linejoin="round"/>
+            </svg> Edit`;
+        }
+
+        // Collapse panel and restore button
+        aiPanel.classList.remove('open');
+        if (aiRegenBtn) {
+          aiRegenBtn.style.background = 'transparent';
+          aiRegenBtn.style.color      = '#F0A500';
+        }
+        if (promptInput) promptInput.value = '';
+      })
+      .catch(err => {
+        generateBtn.disabled = false;
+        generateBtn.innerHTML = `
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+            <path d="M8 1v3M8 12v3M1 8h3M12 8h3M3.22 3.22l2.12 2.12M10.66 10.66l2.12 2.12M3.22 12.78l2.12-2.12M10.66 5.34l2.12-2.12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          </svg> Generate`;
+        if (aiStatus) { aiStatus.textContent = `Error: ${err.message}`; aiStatus.style.color = '#C00'; }
+      });
+    });
+  }
+
+  return card;
+}
+
+// ---------------------------------------------------------------------------
+// Regenerate with AI
+// ---------------------------------------------------------------------------
+function regenerateWithAI() {
+  const btn = document.getElementById('btn-regen');
+
+  // Must have results loaded
+  if (!Object.keys(_allResults).length) {
+    showError('No document loaded. Please upload a file first.');
+    return;
+  }
+
+  // Disable button and show spinner state
+  btn.disabled = true;
+  btn.innerHTML = `
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"
+         style="animation:spin 0.75s linear infinite">
+      <circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="2" stroke-dasharray="20 14"/>
+    </svg>
+    Generating…`;
+  btn.style.background = '#B07800';
+
+  notifications.innerHTML = '';
+
+  fetch('/regenerate', { method: 'POST' })
+    .then(r => r.json())
+    .then(data => {
+      btn.disabled = false;
+      btn.innerHTML = `
+        <svg width="14" height="14" fill="none" viewBox="0 0 16 16">
+          <path d="M13.5 8A5.5 5.5 0 112.5 5.5" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round"/>
+          <path d="M2.5 2v3.5H6" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round"/>
+        </svg>
+        Regenerate with AI`;
+      btn.style.background = '#F0A500';
+
+      if (!data.success) {
+        showError(data.error || 'Regeneration failed.');
+        return;
+      }
+
+      _allResults = data.results;
+      renderResults();
+
+      // Notify how many items were AI-generated
+      const msg = document.createElement('div');
+      msg.className = 'banner banner-warning';
+      msg.style.cssText = 'background:#E8F5E9;border-color:#A5D6A7;color:#1B5E20';
+      msg.innerHTML = `<strong>✦ AI synthesis complete.</strong> ` +
+        `${data.ai_count} of ${Object.keys(data.results).length} items generated by AI.`;
+      notifications.appendChild(msg);
+      setTimeout(() => msg.remove(), 6000);
+    })
+    .catch(err => {
+      btn.disabled = false;
+      btn.style.background = '#F0A500';
+      btn.innerHTML = `
+        <svg width="14" height="14" fill="none" viewBox="0 0 16 16">
+          <path d="M13.5 8A5.5 5.5 0 112.5 5.5" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round"/>
+          <path d="M2.5 2v3.5H6" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round"/>
+        </svg>
+        Regenerate with AI`;
+      showError(`Request failed: ${err.message}`);
+    });
+}
+
+// ---------------------------------------------------------------------------
+// Filter / search
+// ---------------------------------------------------------------------------
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    _activeFilter = btn.dataset.filter;
+    renderResults();
+  });
+});
+
+searchInput.addEventListener('input', () => {
+  _searchQuery = searchInput.value.trim();
+  renderResults();
+});
+
+// ---------------------------------------------------------------------------
+// Notification helpers
+// ---------------------------------------------------------------------------
+function showError(msg) {
+  const div = document.createElement('div');
+  div.className = 'banner banner-error';
+  div.innerHTML = `<strong>Error:</strong> ${escHtml(msg)}`;
+  notifications.appendChild(div);
+}
+
+function showWarning(msg) {
+  const div = document.createElement('div');
+  div.className = 'banner banner-warning';
+  div.innerHTML = `<strong>Warning:</strong> ${escHtml(msg)}`;
+  notifications.appendChild(div);
+}
+
+// ---------------------------------------------------------------------------
+// Utilities
+// ---------------------------------------------------------------------------
+function escHtml(str) {
+  return String(str ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+</script>
+</body>
+</html>

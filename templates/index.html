@@ -544,7 +544,11 @@
     .btn-ack-finding:hover { background: #EBF4FF; border-color: #2E75B6; }
     .btn-ack-finding.acked {
       background: #E8F5E9; color: #1B5E20;
-      border-color: #A5D6A7; cursor: default;
+      border-color: #A5D6A7; cursor: pointer;
+    }
+    .btn-ack-finding.acked:hover {
+      background: #FFEBEE; color: #C62828;
+      border-color: #FFCDD2;
     }
     .sec-acknowledged { background: #E8F5E9; color: #1B5E20; }
 
@@ -1982,36 +1986,57 @@ function renderReviewResult(r) {
       row.classList.toggle('expanded');
     });
 
-    // Wire Acknowledge buttons
+    // Wire Acknowledge / Undo buttons (toggle)
     row.querySelectorAll('.btn-ack-finding').forEach(btn => {
       btn.addEventListener('click', e => {
         e.stopPropagation();
         const fi = parseInt(btn.dataset.fi, 10);
         const findingEl = row.querySelector(`.review-finding[data-fi="${fi}"]`);
+        const isAcked   = btn.classList.contains('acked');
 
-        // Mark finding visually
-        findingEl.classList.add('acknowledged');
-        btn.classList.add('acked');
-        btn.disabled = true;
-        btn.innerHTML = `
-          <svg width="10" height="10" fill="none" viewBox="0 0 12 12">
-            <path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="1.8"
-                  stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          Acknowledged`;
+        if (!isAcked) {
+          // --- Acknowledge ---
+          findingEl.classList.add('acknowledged');
+          btn.classList.add('acked');
+          btn.title = 'Click to undo acknowledgement';
+          btn.innerHTML = `
+            <svg width="10" height="10" fill="none" viewBox="0 0 12 12">
+              <path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="1.8"
+                    stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Acknowledged`;
+          ackState[secIdx].acked++;
+        } else {
+          // --- Undo ---
+          findingEl.classList.remove('acknowledged');
+          btn.classList.remove('acked');
+          btn.title = 'Mark this finding as acknowledged';
+          btn.innerHTML = `
+            <svg width="10" height="10" fill="none" viewBox="0 0 12 12">
+              <path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="1.8"
+                    stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Acknowledge`;
+          ackState[secIdx].acked = Math.max(0, ackState[secIdx].acked - 1);
+        }
 
-        ackState[secIdx].acked++;
-
-        // If all findings in this section are acknowledged → flip section to green
+        // Sync section header badge
+        const iconEl   = row.querySelector('.review-section-icon');
+        const statusEl = row.querySelector('.review-section-status');
         if (ackState[secIdx].acked >= ackState[secIdx].total) {
+          // All acknowledged
           ackState[secIdx].status = 'acknowledged';
-
-          const iconEl   = row.querySelector('.review-section-icon');
-          const statusEl = row.querySelector('.review-section-status');
-          iconEl.style.color  = '#538135';
-          iconEl.textContent  = '✓';
+          iconEl.style.color   = '#538135';
+          iconEl.textContent   = '✓';
           statusEl.textContent = 'acknowledged';
           statusEl.className   = 'review-section-status sec-acknowledged';
+        } else {
+          // Restore original status
+          ackState[secIdx].status = sec.status;
+          iconEl.style.color   = iconColour[sec.status] || '#888';
+          iconEl.textContent   = iconMap[sec.status]    || '?';
+          statusEl.textContent = sec.status;
+          statusEl.className   = `review-section-status ${statusCls[sec.status] || ''}`;
         }
 
         refreshTally();

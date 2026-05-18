@@ -35,6 +35,7 @@ from summarizer import (generate_all, generate_acceptance_criteria_for,
                         set_ac_system_prompt, DEFAULT_AC_SYSTEM_PROMPT)
 from exporter import export_to_excel, export_to_docx
 import reviewer
+from reviewer import DEFAULT_REVIEW_GUIDANCE
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024
@@ -416,9 +417,10 @@ def api_get_setup_config():
     """Return current setup config plus the built-in default AC prompt."""
     cfg = _state.get('setup_config', {'ac_system_prompt': '', 'review_extra_guidance': ''})
     return jsonify({
-        'ac_system_prompt':      cfg.get('ac_system_prompt', ''),
-        'review_extra_guidance': cfg.get('review_extra_guidance', ''),
-        'default_ac_prompt':     DEFAULT_AC_SYSTEM_PROMPT,
+        'ac_system_prompt':              cfg.get('ac_system_prompt', ''),
+        'review_extra_guidance':         cfg.get('review_extra_guidance', ''),
+        'default_ac_prompt':             DEFAULT_AC_SYSTEM_PROMPT,
+        'default_review_guidance':       DEFAULT_REVIEW_GUIDANCE,
     })
 
 

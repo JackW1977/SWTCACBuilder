@@ -16,6 +16,23 @@ from docx import Document
 # Embedded review checklist (SOP-033 §5.3 + TMP-10005 Rev. B)
 # ---------------------------------------------------------------------------
 
+DEFAULT_REVIEW_GUIDANCE = """\
+- Flag any expected result that uses vague language such as "verify", "check", "confirm", \
+"ensure", "as expected", or "screenshot taken" without defining a specific, measurable \
+pass criterion.
+- Flag any acceptance criterion that cannot be objectively evaluated (e.g. subjective \
+wording like "appears correct" or "looks reasonable").
+- If a test step evaluates a risk control measure, confirm that the expected result \
+explicitly demonstrates mitigation of the associated foreseeable failure mode or hazardous \
+situation — not just that the step was executed.
+- Flag any test step that has a blank or placeholder expected result (e.g. "N/A", "TBD", \
+or empty cells).
+- Check that the Device Under Test section identifies the base part number in the format \
+PN-XXX without including a version or revision number.
+- Confirm that every measurement instrument listed in Section 5.1 has a unique \
+calibration/traceability reference (EQ, CSV, or NPSV number).
+"""
+
 REVIEW_CHECKLIST = """\
 SECTION 1 — PURPOSE & DESCRIPTION
 - Describes the type/subject of testing, reason for testing, and scope.

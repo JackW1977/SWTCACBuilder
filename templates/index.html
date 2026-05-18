@@ -987,11 +987,11 @@
       </div>
       <div class="setup-section-body">
         <label class="setup-label" for="setup-review-guidance">Additional Reviewer Instructions</label>
-        <textarea id="setup-review-guidance" class="setup-textarea" rows="5"
-          placeholder="e.g. 'Pay particular attention to the risk control measures in Section 8' or 'Flag any acceptance criteria that are not quantitatively measurable'…"></textarea>
+        <textarea id="setup-review-guidance" class="setup-textarea" rows="8"
+          placeholder="Loading default guidance…"></textarea>
         <p class="setup-hint">
           These instructions are appended verbatim to the review prompt.
-          Leave blank to use the standard SOP-033 §5.3 checklist only.
+          Click <strong>Reset to Default</strong> to restore the built-in guidance checks.
         </p>
         <div class="setup-actions">
           <button class="btn-save-setup" onclick="saveSetupConfig()">
@@ -1001,6 +1001,7 @@
             </svg>
             Save
           </button>
+          <button class="btn-reset-prompt" onclick="resetReviewGuidance()">Reset to Default</button>
           <span class="setup-save-msg" id="review-guidance-msg"></span>
         </div>
       </div>
@@ -1944,7 +1945,8 @@ function showReviewError(msg) {
 // ===========================================================================
 // Setup tab
 // ===========================================================================
-let _defaultAcPrompt = '';
+let _defaultAcPrompt       = '';
+let _defaultReviewGuidance = '';
 
 function loadSetupConfig() {
   // Load AI status for Setup tab
@@ -1961,14 +1963,19 @@ function loadSetupConfig() {
 
   // Load setup config
   fetch('/api/setup-config').then(r => r.json()).then(d => {
-    _defaultAcPrompt = d.default_ac_prompt || '';
+    _defaultAcPrompt       = d.default_ac_prompt       || '';
+    _defaultReviewGuidance = d.default_review_guidance || '';
+
     const promptTA = document.getElementById('setup-ac-prompt');
     if (promptTA) {
       // Show the custom prompt if set; otherwise show the default
       promptTA.value = d.ac_system_prompt || d.default_ac_prompt || '';
     }
     const guidanceTA = document.getElementById('setup-review-guidance');
-    if (guidanceTA) guidanceTA.value = d.review_extra_guidance || '';
+    if (guidanceTA) {
+      // Show saved guidance if set; otherwise show the default
+      guidanceTA.value = d.review_extra_guidance || d.default_review_guidance || '';
+    }
   }).catch(() => {});
 
   // Load reference list
@@ -1978,6 +1985,11 @@ function loadSetupConfig() {
 function resetAcPrompt() {
   const ta = document.getElementById('setup-ac-prompt');
   if (ta) ta.value = _defaultAcPrompt;
+}
+
+function resetReviewGuidance() {
+  const ta = document.getElementById('setup-review-guidance');
+  if (ta) ta.value = _defaultReviewGuidance;
 }
 
 function saveSetupConfig() {

@@ -22,3 +22,12 @@ Thumbs.db
 # Temp / test artefacts
 _test_*.py
 *.tmp
+
+# Claude Code tooling (local IDE config)
+.claude/
+
+# Reference documents — internal/confidential, managed locally
+references/*.docx
+references/*.doc
+references/*.pdf
+references/*.txt

@@ -129,7 +129,7 @@ that section heading does NOT appear in the DOCUMENT SECTION MAP.
 # Text extraction — document order preserved
 # ---------------------------------------------------------------------------
 
-def extract_tc_text(docx_path: str) -> str:
+def extract_tc_text(docx_path: str, body_limit: Optional[int] = None) -> str:
     """
     Extract text from a TC .docx in document order (paragraphs and tables
     interleaved as they appear), preserving heading levels and table rows.
@@ -137,7 +137,8 @@ def extract_tc_text(docx_path: str) -> str:
     Strategy:
     - Always prepend a SECTION MAP listing every heading found in the document
       so the AI knows which sections exist even if body content is truncated.
-    - Body content is truncated at 40 000 characters.
+    - Body content is truncated to ``body_limit`` chars (caller supplies this
+      so the total prompt fits within Glean's context window).
     """
     doc = Document(docx_path)
     headings: List[str] = []
@@ -189,9 +190,11 @@ def extract_tc_text(docx_path: str) -> str:
         )
 
     body = '\n'.join(lines)
-    limit = 40_000
-    if len(body) > limit:
-        body = body[:limit] + '\n\n[... document truncated at 40 000 chars ...]'
+    # body_limit is passed in from review_tc so the total prompt stays within
+    # Glean's context window; fall back to 12 000 if called standalone.
+    actual_limit = body_limit if body_limit is not None else 12_000
+    if len(body) > actual_limit:
+        body = body[:actual_limit] + '\n\n[... document truncated ...]'
 
     return section_map + body
 
@@ -200,7 +203,10 @@ def extract_tc_text(docx_path: str) -> str:
 # Glean API call
 # ---------------------------------------------------------------------------
 
-def _call_glean(prompt: str, glean_url: str, glean_api_key: str) -> Optional[str]:
+def _call_glean(prompt: str, glean_url: str, glean_api_key: str) -> tuple:
+    """
+    Returns (text, error_message).  Exactly one of the two will be non-None.
+    """
     endpoint = glean_url.rstrip('/') + '/rest/api/v1/chat'
     payload = {
         'messages': [{'author': 'USER', 'fragments': [{'text': prompt}]}],
@@ -212,7 +218,16 @@ def _call_glean(prompt: str, glean_url: str, glean_api_key: str) -> Optional[str
     }
     try:
         resp = requests.post(endpoint, json=payload, headers=headers, timeout=90)
-        resp.raise_for_status()
+        if not resp.ok:
+            err = f'Glean returned HTTP {resp.status_code}'
+            try:
+                body = resp.json()
+                msg = body.get('message') or body.get('error') or str(body)[:200]
+                err += f': {msg}'
+            except Exception:
+                err += f' — {resp.text[:200]}'
+            print(f'[reviewer] {err}')
+            return None, err
         data = resp.json()
         for msg in reversed(data.get('messages', [])):
             if msg.get('author', '').upper() in ('GLEAN_AI', 'AI', 'ASSISTANT'):
@@ -221,15 +236,20 @@ def _call_glean(prompt: str, glean_url: str, glean_api_key: str) -> Optional[str
                     if isinstance(f, dict)
                 )
                 if text.strip():
-                    return text.strip()
+                    return text.strip(), None
         for choice in data.get('choices', []):
             content = choice.get('message', {}).get('content') or choice.get('text', '')
             if content and content.strip():
-                return content.strip()
-        return None
+                return content.strip(), None
+        return None, 'Glean returned a response but contained no text.'
+    except requests.Timeout:
+        err = 'Glean request timed out after 90 s — document may be too large.'
+        print(f'[reviewer] {err}')
+        return None, err
     except Exception as exc:
-        print(f'[reviewer] Glean call failed: {exc}')
-        return None
+        err = f'Glean call failed: {exc}'
+        print(f'[reviewer] {err}')
+        return None, err
 
 
 # ---------------------------------------------------------------------------
@@ -278,12 +298,21 @@ def review_tc(
           'tc_chars':     int,   # characters extracted from document
         }
     """
-    tc_text = extract_tc_text(docx_path)
-
     extra_block = (
         f'\nAdditional reviewer guidance from user:\n{extra_prompt.strip()}\n'
         if extra_prompt and extra_prompt.strip() else ''
     )
+
+    # Compute fixed overhead so we can budget what's left for the document.
+    # Target: keep total prompt ≤ 16 000 chars (Glean's reliable working range).
+    _FIXED_OVERHEAD = (
+        len(_REVIEW_SYSTEM_PROMPT) + len(REVIEW_CHECKLIST) + len(extra_block)
+        + 400  # formatting labels, newlines, section-map header
+    )
+    _MAX_TOTAL = 16_000
+    body_limit = max(_MAX_TOTAL - _FIXED_OVERHEAD, 4_000)
+
+    tc_text = extract_tc_text(docx_path, body_limit=body_limit)
 
     prompt = (
         f'{_REVIEW_SYSTEM_PROMPT}\n\n'
@@ -292,11 +321,11 @@ def review_tc(
         f'TEST CASE DOCUMENT:\n{tc_text}'
     )
 
-    raw = _call_glean(prompt, glean_config['url'], glean_config['api_key'])
+    raw, glean_err = _call_glean(prompt, glean_config['url'], glean_config['api_key'])
     if not raw:
         return {
             'overall': 'ERROR',
-            'summary': 'Glean AI did not return a response. Check connection and configuration.',
+            'summary': glean_err or 'Glean AI did not return a response. Check connection and configuration.',
             'sections': [],
             'tc_chars': len(tc_text),
         }

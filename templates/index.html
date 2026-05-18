@@ -522,11 +522,31 @@
     .review-section-row.expanded .review-section-body { display: block; }
     .review-finding {
       font-size: 0.83rem; color: #444; line-height: 1.55;
-      padding: 4px 0;
+      padding: 6px 0;
       border-bottom: 1px solid #EDF2F7;
+      display: flex; align-items: flex-start; gap: 8px;
     }
     .review-finding:last-child { border-bottom: none; }
-    .review-finding::before { content: '• '; color: #888; }
+    .finding-bullet { flex-shrink: 0; color: #888; margin-top: 1px; }
+    .finding-text   { flex: 1; }
+    .review-finding.acknowledged .finding-text {
+      color: #999; text-decoration: line-through;
+    }
+    .review-finding.acknowledged .finding-bullet { color: #70AD47; }
+    .btn-ack-finding {
+      flex-shrink: 0;
+      display: inline-flex; align-items: center; gap: 4px;
+      background: transparent; color: #2E75B6;
+      border: 1.5px solid #C5DDF4; border-radius: 4px;
+      padding: 3px 9px; font-size: 0.73rem; font-weight: 600;
+      cursor: pointer; transition: all 0.15s; white-space: nowrap;
+    }
+    .btn-ack-finding:hover { background: #EBF4FF; border-color: #2E75B6; }
+    .btn-ack-finding.acked {
+      background: #E8F5E9; color: #1B5E20;
+      border-color: #A5D6A7; cursor: default;
+    }
+    .sec-acknowledged { background: #E8F5E9; color: #1B5E20; }
 
     /* ------------------------------------------------------------------ */
     /* Setup tab                                                            */
@@ -1879,57 +1899,127 @@ function renderReviewResult(r) {
 
   if (!r.sections || !r.sections.length) {
     list.innerHTML = '<p style="color:#888;font-size:0.85rem;padding:8px 0">No section data returned.</p>';
-  } else {
-    // Tally
-    const counts = { pass: 0, warning: 0, fail: 0 };
-    r.sections.forEach(s => { if (counts[s.status] !== undefined) counts[s.status]++; });
-
-    const tally = document.createElement('p');
-    tally.style.cssText = 'font-size:0.82rem;color:#888;margin-bottom:12px';
-    tally.innerHTML =
-      `<span style="color:#1B5E20;font-weight:700">${counts.pass} pass</span> &nbsp;·&nbsp; ` +
-      `<span style="color:#6B4900;font-weight:700">${counts.warning} warning</span> &nbsp;·&nbsp; ` +
-      `<span style="color:#C62828;font-weight:700">${counts.fail} fail</span>`;
-    list.appendChild(tally);
-
-    r.sections.forEach(sec => {
-      const iconMap    = { pass: '✓', warning: '⚠', fail: '✗' };
-      const iconColour = { pass: '#2E7D32', warning: '#E65100', fail: '#C62828' };
-      const cls        = { pass: 'sec-pass', warning: 'sec-warning', fail: 'sec-fail' };
-
-      const row = document.createElement('div');
-      row.className = 'review-section-row';
-
-      const hasFindings = sec.findings && sec.findings.length > 0;
-      const findingsHtml = hasFindings
-        ? sec.findings.map(f => `<div class="review-finding">${escHtml(f)}</div>`).join('')
-        : '<div class="review-finding" style="color:#888">No issues found.</div>';
-
-      row.innerHTML = `
-        <div class="review-section-hdr">
-          <span class="review-section-icon" style="color:${iconColour[sec.status] || '#888'}">
-            ${iconMap[sec.status] || '?'}
-          </span>
-          <span class="review-section-name">Section ${escHtml(sec.id)} — ${escHtml(sec.name)}</span>
-          <span class="review-section-status ${cls[sec.status] || ''}">${escHtml(sec.status)}</span>
-          <span class="review-section-chevron">▼</span>
-        </div>
-        <div class="review-section-body">${findingsHtml}</div>
-      `;
-
-      // Click to expand/collapse
-      row.querySelector('.review-section-hdr').addEventListener('click', () => {
-        row.classList.toggle('expanded');
-      });
-
-      // Auto-expand warnings and fails
-      if (sec.status === 'warning' || sec.status === 'fail') {
-        row.classList.add('expanded');
-      }
-
-      list.appendChild(row);
-    });
+    reviewPanel.classList.add('visible');
+    reviewPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    return;
   }
+
+  // Per-section acknowledge state: track how many findings acknowledged
+  const ackState = r.sections.map(s => ({
+    status:       s.status,
+    total:        (s.findings || []).length,
+    acked:        0,
+  }));
+
+  // --- Tally (dynamic) ---
+  const tally = document.createElement('p');
+  tally.style.cssText = 'font-size:0.82rem;color:#888;margin-bottom:12px';
+  list.appendChild(tally);
+
+  function refreshTally() {
+    let pass = 0, warn = 0, fail = 0, ackd = 0;
+    ackState.forEach(s => {
+      if      (s.status === 'acknowledged') ackd++;
+      else if (s.status === 'pass')         pass++;
+      else if (s.status === 'warning')      warn++;
+      else if (s.status === 'fail')         fail++;
+    });
+    tally.innerHTML =
+      `<span style="color:#1B5E20;font-weight:700">${pass} pass</span> &nbsp;·&nbsp; ` +
+      `<span style="color:#6B4900;font-weight:700">${warn} warning</span> &nbsp;·&nbsp; ` +
+      `<span style="color:#C62828;font-weight:700">${fail} fail</span>` +
+      (ackd ? ` &nbsp;·&nbsp; <span style="color:#538135;font-weight:700">${ackd} acknowledged</span>` : '');
+  }
+  refreshTally();
+
+  // --- Build section rows ---
+  const iconMap    = { pass: '✓', warning: '⚠', fail: '✗', acknowledged: '✓' };
+  const iconColour = { pass: '#2E7D32', warning: '#E65100', fail: '#C62828', acknowledged: '#538135' };
+  const statusCls  = { pass: 'sec-pass', warning: 'sec-warning', fail: 'sec-fail', acknowledged: 'sec-acknowledged' };
+
+  r.sections.forEach((sec, secIdx) => {
+    const isActionable = sec.status === 'warning' || sec.status === 'fail';
+    const row = document.createElement('div');
+    row.className = 'review-section-row';
+    if (isActionable) row.classList.add('expanded');
+
+    // Build findings HTML — actionable sections get an Acknowledge button per finding
+    const hasFindings = sec.findings && sec.findings.length > 0;
+    let findingsHtml = '';
+    if (hasFindings) {
+      findingsHtml = sec.findings.map((f, fi) => `
+        <div class="review-finding" data-fi="${fi}">
+          <span class="finding-bullet">•</span>
+          <span class="finding-text">${escHtml(f)}</span>
+          ${isActionable
+            ? `<button class="btn-ack-finding" data-fi="${fi}" title="Mark this finding as acknowledged">
+                 <svg width="10" height="10" fill="none" viewBox="0 0 12 12">
+                   <path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="1.8"
+                         stroke-linecap="round" stroke-linejoin="round"/>
+                 </svg>
+                 Acknowledge
+               </button>`
+            : ''}
+        </div>`).join('');
+    } else {
+      findingsHtml = '<div class="review-finding"><span class="finding-bullet" style="color:#70AD47">•</span><span class="finding-text" style="color:#888">No issues found.</span></div>';
+    }
+
+    row.innerHTML = `
+      <div class="review-section-hdr">
+        <span class="review-section-icon" style="color:${iconColour[sec.status] || '#888'}">
+          ${iconMap[sec.status] || '?'}
+        </span>
+        <span class="review-section-name">Section ${escHtml(sec.id)} — ${escHtml(sec.name)}</span>
+        <span class="review-section-status ${statusCls[sec.status] || ''}">${escHtml(sec.status)}</span>
+        <span class="review-section-chevron">▼</span>
+      </div>
+      <div class="review-section-body">${findingsHtml}</div>
+    `;
+
+    // Expand/collapse on header click
+    row.querySelector('.review-section-hdr').addEventListener('click', () => {
+      row.classList.toggle('expanded');
+    });
+
+    // Wire Acknowledge buttons
+    row.querySelectorAll('.btn-ack-finding').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        const fi = parseInt(btn.dataset.fi, 10);
+        const findingEl = row.querySelector(`.review-finding[data-fi="${fi}"]`);
+
+        // Mark finding visually
+        findingEl.classList.add('acknowledged');
+        btn.classList.add('acked');
+        btn.disabled = true;
+        btn.innerHTML = `
+          <svg width="10" height="10" fill="none" viewBox="0 0 12 12">
+            <path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="1.8"
+                  stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Acknowledged`;
+
+        ackState[secIdx].acked++;
+
+        // If all findings in this section are acknowledged → flip section to green
+        if (ackState[secIdx].acked >= ackState[secIdx].total) {
+          ackState[secIdx].status = 'acknowledged';
+
+          const iconEl   = row.querySelector('.review-section-icon');
+          const statusEl = row.querySelector('.review-section-status');
+          iconEl.style.color  = '#538135';
+          iconEl.textContent  = '✓';
+          statusEl.textContent = 'acknowledged';
+          statusEl.className   = 'review-section-status sec-acknowledged';
+        }
+
+        refreshTally();
+      });
+    });
+
+    list.appendChild(row);
+  });
 
   reviewPanel.classList.add('visible');
   reviewPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });

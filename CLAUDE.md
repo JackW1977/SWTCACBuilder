@@ -19,12 +19,15 @@ stop.bat     # kill server on port 5000
 | `app.py` | Flask app — all routes |
 | `parser.py` | `.docx` parser — extracts Requirements, Specifications, Procedure Steps |
 | `summarizer.py` | Glean AI client + rule-based fallback AC generator |
+| `reviewer.py` | TC compliance review against SOP-033 §5.3 + TMP-10005 Rev. B |
 | `exporter.py` | Excel (openpyxl) and Word (python-docx) export |
-| `templates/index.html` | Entire front-end — single HTML file with inline CSS + JS |
+| `templates/index.html` | Entire front-end — three tabs: AC Builder, TC Review, Setup |
 | `requirements.txt` | `flask`, `python-docx`, `openpyxl`, `requests` |
 | `deploy.bat` | Auto-discovers Python ≥ 3.10, creates `venv/`, installs deps |
 | `launch.bat` | Starts `venv/Scripts/python.exe app.py`, waits for port 5000, opens browser |
-| `glean_config.json` | **Gitignored** — persisted Glean URL + API key (re-enter via UI after clone) |
+| `glean_config.json` | **Gitignored** — persisted Glean URL + API key |
+| `setup_config.json` | **Gitignored** — persisted AC prompt + review extra guidance |
+| `references/` | SOP-033 Rev. I and TMP-10005 Rev. B source docs (and any user-added refs) |
 
 ## Architecture
 
@@ -58,6 +61,11 @@ stop.bat     # kill server on port 5000
 | `/ai-status` | GET | Returns `{ai_active, glean_url, api_key, has_key, message}` |
 | `/export/excel` | GET | Download `.xlsx` from `_state['results']` |
 | `/export/docx` | GET | Download `.docx` from `_state['results']` |
+| `/review-tc` | POST | Upload TC .docx → run `reviewer.review_tc()` → return structured result |
+| `/api/setup-config` | GET | Return `{ac_system_prompt, review_extra_guidance, default_ac_prompt}` |
+| `/api/save-setup` | POST | Persist `{ac_system_prompt, review_extra_guidance}` to `setup_config.json` |
+| `/api/references` | GET | List files in `references/` folder |
+| `/api/upload-reference` | POST | Upload a new doc to `references/` |
 
 ### Front-end (`templates/index.html`)
 - **Single HTML file** — inline CSS + vanilla JS, no build step, no frameworks

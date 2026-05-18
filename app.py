@@ -3,15 +3,22 @@ app.py – Flask web application for the SW Test Case Acceptance Criteria Builde
 
 Routes
 ------
-GET  /                  – main UI
-POST /upload            – parse .docx, return JSON results
-POST /regenerate        – re-run AC generation on cached data (use_ai=True)
-POST /configure         – save Glean service URL + API key
-POST /test-connection   – test Glean connectivity
-GET  /ai-status         – report whether Glean AI is configured
-GET  /export/excel      – download .xlsx
-GET  /export/docx       – download .docx
-GET  /health            – liveness check
+GET  /                        – main UI
+POST /upload                  – parse .docx, return JSON results
+POST /regenerate              – re-run AC generation on cached data (use_ai=True)
+POST /regenerate-single       – re-run AC for one item with optional custom prompt
+POST /save-edit               – persist manually-edited AC to session state
+POST /configure               – save Glean service URL + API key
+POST /test-connection         – test Glean connectivity
+GET  /ai-status               – report whether Glean AI is configured
+GET  /export/excel            – download .xlsx
+GET  /export/docx             – download .docx
+GET  /health                  – liveness check
+POST /review-tc               – review a TC .docx against SOP-033 §5.3 + TMP-10005
+GET  /api/setup-config        – return setup config + default AC prompt
+POST /api/save-setup          – persist AC prompt + review guidance
+GET  /api/references          – list files in references/ folder
+POST /api/upload-reference    – upload a new file to references/ folder
 """
 
 import io
@@ -23,8 +30,11 @@ import tempfile
 from flask import Flask, render_template, request, jsonify, send_file
 
 from parser import parse_document
-from summarizer import generate_all, generate_acceptance_criteria_for, ai_available, test_glean_connection
+from summarizer import (generate_all, generate_acceptance_criteria_for,
+                        ai_available, test_glean_connection,
+                        set_ac_system_prompt, DEFAULT_AC_SYSTEM_PROMPT)
 from exporter import export_to_excel, export_to_docx
+import reviewer
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024
@@ -34,6 +44,8 @@ app.secret_key = os.urandom(32)
 # Persisted Glean config
 # ---------------------------------------------------------------------------
 _CONFIG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'glean_config.json')
+_SETUP_CONFIG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'setup_config.json')
+_REFERENCES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'references')
 
 
 def _load_glean_config() -> dict:
@@ -59,19 +71,46 @@ def _save_glean_config(cfg: dict) -> None:
         print(f'[config] Could not persist Glean config: {exc}')
 
 
+def _load_setup_config() -> dict:
+    """Load setup config (AC prompt + review guidance) from disk."""
+    try:
+        with open(_SETUP_CONFIG_FILE, 'r') as f:
+            return json.load(f)
+    except Exception:
+        pass
+    return {'ac_system_prompt': '', 'review_extra_guidance': ''}
+
+
+def _save_setup_config(cfg: dict) -> None:
+    try:
+        with open(_SETUP_CONFIG_FILE, 'w') as f:
+            json.dump(cfg, f, indent=2)
+    except Exception as exc:
+        print(f'[config] Could not persist setup config: {exc}')
+
+
 # ---------------------------------------------------------------------------
 # In-memory session state
 # ---------------------------------------------------------------------------
-_state: dict = {
-    'results':         {},
-    'filename':        '',
-    'stats':           {},
-    'warnings':        [],
-    '_requirements':   [],
-    '_specifications': [],
-    '_procedure_steps': [],
-    'glean_config': _load_glean_config(),
-}
+def _init_state() -> dict:
+    glean_cfg = _load_glean_config()
+    setup_cfg = _load_setup_config()
+    # Apply saved AC prompt if one exists
+    if setup_cfg.get('ac_system_prompt'):
+        set_ac_system_prompt(setup_cfg['ac_system_prompt'])
+    return {
+        'results':          {},
+        'filename':         '',
+        'stats':            {},
+        'warnings':         [],
+        '_requirements':    [],
+        '_specifications':  [],
+        '_procedure_steps': [],
+        'glean_config':     glean_cfg,
+        'setup_config':     setup_cfg,
+    }
+
+_state: dict = _init_state()
 
 
 # ---------------------------------------------------------------------------
@@ -332,6 +371,102 @@ def export_docx_route():
         as_attachment=True,
         mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     )
+
+
+# ---------------------------------------------------------------------------
+# TC Review
+# ---------------------------------------------------------------------------
+
+@app.route('/review-tc', methods=['POST'])
+def review_tc_route():
+    """Upload a TC .docx and return a structured compliance review."""
+    if 'file' not in request.files:
+        return jsonify({'success': False, 'error': 'No file part in request.'}), 400
+
+    f = request.files['file']
+    if not f or not f.filename:
+        return jsonify({'success': False, 'error': 'No file selected.'}), 400
+    if not f.filename.lower().endswith('.docx'):
+        return jsonify({'success': False, 'error': 'Only .docx files are supported.'}), 400
+
+    tmp_fd, tmp_path = tempfile.mkstemp(suffix='.docx')
+    try:
+        os.close(tmp_fd)
+        f.save(tmp_path)
+        extra = _state.get('setup_config', {}).get('review_extra_guidance', '')
+        result = reviewer.review_tc(tmp_path, _state['glean_config'], extra_prompt=extra)
+        result['filename'] = f.filename
+        return jsonify({'success': True, 'result': result})
+    except Exception as exc:
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(exc)}), 500
+    finally:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+
+
+# ---------------------------------------------------------------------------
+# Setup config
+# ---------------------------------------------------------------------------
+
+@app.route('/api/setup-config', methods=['GET'])
+def api_get_setup_config():
+    """Return current setup config plus the built-in default AC prompt."""
+    cfg = _state.get('setup_config', {'ac_system_prompt': '', 'review_extra_guidance': ''})
+    return jsonify({
+        'ac_system_prompt':      cfg.get('ac_system_prompt', ''),
+        'review_extra_guidance': cfg.get('review_extra_guidance', ''),
+        'default_ac_prompt':     DEFAULT_AC_SYSTEM_PROMPT,
+    })
+
+
+@app.route('/api/save-setup', methods=['POST'])
+def api_save_setup():
+    """Persist AC prompt + review guidance; apply prompt to summarizer."""
+    data = request.get_json(silent=True) or {}
+    cfg = {
+        'ac_system_prompt':      (data.get('ac_system_prompt')      or '').strip(),
+        'review_extra_guidance': (data.get('review_extra_guidance') or '').strip(),
+    }
+    _state['setup_config'] = cfg
+    _save_setup_config(cfg)
+    set_ac_system_prompt(cfg['ac_system_prompt'])
+    return jsonify({'success': True, 'message': 'Setup configuration saved.'})
+
+
+# ---------------------------------------------------------------------------
+# Reference documents
+# ---------------------------------------------------------------------------
+
+@app.route('/api/references', methods=['GET'])
+def api_references():
+    """List files in the references/ folder."""
+    try:
+        files = [f for f in os.listdir(_REFERENCES_DIR) if not f.startswith('.')]
+        files.sort()
+        return jsonify({'files': files})
+    except Exception as exc:
+        return jsonify({'files': [], 'error': str(exc)})
+
+
+@app.route('/api/upload-reference', methods=['POST'])
+def api_upload_reference():
+    """Upload a new document to the references/ folder."""
+    if 'file' not in request.files:
+        return jsonify({'success': False, 'error': 'No file part.'}), 400
+    f = request.files['file']
+    if not f or not f.filename:
+        return jsonify({'success': False, 'error': 'No file selected.'}), 400
+
+    filename = os.path.basename(f.filename)  # prevent path traversal
+    try:
+        os.makedirs(_REFERENCES_DIR, exist_ok=True)
+        f.save(os.path.join(_REFERENCES_DIR, filename))
+        return jsonify({'success': True, 'filename': filename})
+    except Exception as exc:
+        return jsonify({'success': False, 'error': str(exc)}), 500
 
 
 # ---------------------------------------------------------------------------

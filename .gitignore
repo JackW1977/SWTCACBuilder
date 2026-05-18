@@ -9,6 +9,7 @@ venv/
 
 # Persisted config (contains API key — do not commit)
 glean_config.json
+setup_config.json
 
 # OS
 .DS_Store

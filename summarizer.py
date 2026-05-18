@@ -47,10 +47,31 @@ _SYSTEM_INSTRUCTIONS = textwrap.dedent("""\
     7. Output ONLY the AC text — no ID prefix, no step numbers, no commentary.
 """)
 
+# ---------------------------------------------------------------------------
+# Exportable default + runtime-override slot for the AC system prompt
+# ---------------------------------------------------------------------------
+
+#: The default prompt shipped with the app — exposed so the Setup page can
+#: show it and allow the user to edit / reset to it.
+DEFAULT_AC_SYSTEM_PROMPT: str = _SYSTEM_INSTRUCTIONS
+
+#: Runtime override set via :func:`set_ac_system_prompt`.  Empty string means
+#: "use the built-in default."
+_custom_ac_system_prompt: str = ''
+
+
+def set_ac_system_prompt(prompt: str) -> None:
+    """Replace the AC system instructions at runtime (called from Setup save)."""
+    global _custom_ac_system_prompt
+    _custom_ac_system_prompt = prompt.strip()
+
 
 def _build_user_message(req_number: str, req_description: str,
                         steps: List[ProcedureStep],
                         custom_prompt: str = '') -> str:
+    # Use user-customised prompt if one has been set, otherwise fall back to
+    # the built-in instructions.
+    instructions = _custom_ac_system_prompt if _custom_ac_system_prompt else _SYSTEM_INSTRUCTIONS
     steps_block = ""
     for step in steps:
         clean_er = re.sub(
@@ -72,7 +93,7 @@ def _build_user_message(req_number: str, req_description: str,
     )
 
     return textwrap.dedent(f"""\
-        {_SYSTEM_INSTRUCTIONS}
+        {instructions}
 
         Context (DO NOT copy this wording into the AC):
         Requirement ID  : {req_number}

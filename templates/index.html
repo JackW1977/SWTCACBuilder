@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SWT CAC Builder – Acceptance Criteria Generator</title>
+  <title>SWT CAC Builder</title>
   <style>
     /* ------------------------------------------------------------------ */
     /* Reset & base                                                         */
@@ -44,6 +44,41 @@
     #export-bar.visible { display: flex; }
 
     /* ------------------------------------------------------------------ */
+    /* Tab navigation                                                       */
+    /* ------------------------------------------------------------------ */
+    #tab-nav {
+      background: #fff;
+      border-bottom: 2px solid #E0E8F0;
+      display: flex;
+      padding: 0 32px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+      gap: 0;
+    }
+    .tab-btn {
+      padding: 13px 22px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #666;
+      background: none;
+      border: none;
+      border-bottom: 3px solid transparent;
+      margin-bottom: -2px;
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+    }
+    .tab-btn:hover { color: #1F4E79; }
+    .tab-btn.active { color: #1F4E79; border-bottom-color: #2E75B6; }
+
+    /* ------------------------------------------------------------------ */
+    /* Tab content                                                          */
+    /* ------------------------------------------------------------------ */
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* ------------------------------------------------------------------ */
     /* Layout                                                               */
     /* ------------------------------------------------------------------ */
     .page-wrapper {
@@ -55,7 +90,7 @@
     /* ------------------------------------------------------------------ */
     /* Upload zone                                                          */
     /* ------------------------------------------------------------------ */
-    #upload-section {
+    .upload-zone {
       background: #fff;
       border-radius: 12px;
       border: 2px dashed #B0C8E0;
@@ -65,16 +100,16 @@
       cursor: pointer;
       margin-bottom: 28px;
     }
-    #upload-section:hover,
-    #upload-section.drag-over { border-color: #2E75B6; background: #EBF4FF; }
-    #upload-section.has-file  { border-color: #70AD47; border-style: solid; background: #F4FBF0; }
+    .upload-zone:hover,
+    .upload-zone.drag-over { border-color: #2E75B6; background: #EBF4FF; }
+    .upload-zone.has-file  { border-color: #70AD47; border-style: solid; background: #F4FBF0; }
 
-    #upload-section .upload-icon { margin-bottom: 16px; }
-    #upload-section h2 { font-size: 1.15rem; color: #1F4E79; margin-bottom: 8px; }
-    #upload-section p  { font-size: 0.88rem; color: #666; }
-    #upload-section p.hint { margin-top: 6px; font-size: 0.8rem; color: #999; }
+    .upload-zone .upload-icon { margin-bottom: 16px; }
+    .upload-zone h2 { font-size: 1.15rem; color: #1F4E79; margin-bottom: 8px; }
+    .upload-zone p  { font-size: 0.88rem; color: #666; }
+    .upload-zone p.hint { margin-top: 6px; font-size: 0.8rem; color: #999; }
 
-    #file-input { display: none; }
+    .file-input-hidden { display: none; }
 
     .btn-primary {
       display: inline-flex; align-items: center; gap: 6px;
@@ -174,7 +209,6 @@
       font-size: 1rem; font-weight: 700; color: #1F4E79;
       text-transform: uppercase; letter-spacing: 0.8px;
       margin: 24px 0 12px;
-      padding-left: 4px;
       border-left: 4px solid #2E75B6;
       padding-left: 10px;
     }
@@ -366,11 +400,11 @@
     /* ------------------------------------------------------------------ */
     /* Spinner / loader                                                     */
     /* ------------------------------------------------------------------ */
-    #loader {
+    .loader-block {
       display: none;
       text-align: center; padding: 60px 0;
     }
-    #loader.visible { display: block; }
+    .loader-block.visible { display: block; }
     .spinner {
       width: 48px; height: 48px;
       border: 5px solid #D0DCE8;
@@ -380,7 +414,7 @@
       margin: 0 auto 16px;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
-    #loader p { color: #666; font-size: 0.9rem; }
+    .loader-block p { color: #666; font-size: 0.9rem; }
 
     /* ------------------------------------------------------------------ */
     /* Error / warning banners                                              */
@@ -395,12 +429,203 @@
     /* ------------------------------------------------------------------ */
     /* Empty state                                                          */
     /* ------------------------------------------------------------------ */
-    #empty-state {
+    .empty-state {
       text-align: center; padding: 60px 0; color: #AAB;
       display: none;
     }
-    #empty-state.visible { display: block; }
-    #empty-state p { font-size: 0.9rem; margin-top: 8px; }
+    .empty-state.visible { display: block; }
+    .empty-state p { font-size: 0.9rem; margin-top: 8px; }
+
+    /* ------------------------------------------------------------------ */
+    /* TC Review tab                                                        */
+    /* ------------------------------------------------------------------ */
+    #review-result-panel { display: none; }
+    #review-result-panel.visible { display: block; }
+
+    .review-overall-card {
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 1px 5px rgba(0,0,0,0.08);
+      border: 1px solid #E0E8F0;
+      padding: 24px 28px;
+      margin-bottom: 20px;
+    }
+    .review-overall-header {
+      display: flex; align-items: center; gap: 14px; margin-bottom: 12px;
+    }
+    .review-status-badge {
+      font-size: 0.85rem; font-weight: 700;
+      padding: 5px 14px; border-radius: 20px;
+      text-transform: uppercase; letter-spacing: 0.4px;
+      flex-shrink: 0;
+    }
+    .status-pass     { background: #E8F5E9; color: #1B5E20; border: 1px solid #A5D6A7; }
+    .status-review   { background: #FFF8E1; color: #6B4900; border: 1px solid #FFD54F; }
+    .status-fail     { background: #FFEBEE; color: #8B0000; border: 1px solid #FFCDD2; }
+    .status-error    { background: #F5F5F5; color: #555;    border: 1px solid #CCC; }
+
+    .review-filename {
+      font-size: 0.9rem; font-weight: 600; color: #1F4E79;
+    }
+    .review-meta {
+      font-size: 0.78rem; color: #999; margin-top: 2px;
+    }
+    .review-summary {
+      font-size: 0.9rem; color: #444; line-height: 1.6;
+      padding: 10px 14px;
+      background: #F7FAFD; border-radius: 7px;
+      border-left: 3px solid #C5DDF4;
+    }
+
+    .review-sections-header {
+      font-size: 1rem; font-weight: 700; color: #1F4E79;
+      margin: 24px 0 12px;
+      border-left: 4px solid #2E75B6;
+      padding-left: 10px;
+    }
+
+    .review-section-row {
+      background: #fff;
+      border: 1px solid #E0E8F0;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      overflow: hidden;
+    }
+    .review-section-hdr {
+      display: flex; align-items: center; gap: 10px;
+      padding: 11px 16px;
+      cursor: pointer;
+      transition: background 0.12s;
+    }
+    .review-section-hdr:hover { background: #F7FAFD; }
+    .review-section-icon { font-size: 1rem; flex-shrink: 0; width: 20px; text-align: center; }
+    .review-section-name { flex: 1; font-size: 0.87rem; font-weight: 600; color: #1A2530; }
+    .review-section-status {
+      font-size: 0.7rem; font-weight: 700;
+      padding: 2px 9px; border-radius: 12px;
+      text-transform: uppercase; letter-spacing: 0.3px;
+    }
+    .sec-pass    { background: #E8F5E9; color: #1B5E20; }
+    .sec-warning { background: #FFF8E1; color: #6B4900; }
+    .sec-fail    { background: #FFEBEE; color: #C62828; }
+    .review-section-chevron {
+      font-size: 0.75rem; color: #AAA; flex-shrink: 0;
+      transition: transform 0.15s;
+    }
+    .review-section-row.expanded .review-section-chevron { transform: rotate(180deg); }
+    .review-section-body {
+      display: none;
+      padding: 10px 16px 14px 46px;
+      border-top: 1px solid #EDF2F7;
+      background: #FAFBFC;
+    }
+    .review-section-row.expanded .review-section-body { display: block; }
+    .review-finding {
+      font-size: 0.83rem; color: #444; line-height: 1.55;
+      padding: 4px 0;
+      border-bottom: 1px solid #EDF2F7;
+    }
+    .review-finding:last-child { border-bottom: none; }
+    .review-finding::before { content: '• '; color: #888; }
+
+    /* ------------------------------------------------------------------ */
+    /* Setup tab                                                            */
+    /* ------------------------------------------------------------------ */
+    .setup-section {
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 1px 5px rgba(0,0,0,0.08);
+      border: 1px solid #E0E8F0;
+      margin-bottom: 24px;
+      overflow: hidden;
+    }
+    .setup-section-hdr {
+      padding: 16px 24px;
+      background: #F7FAFD;
+      border-bottom: 1px solid #EDF2F7;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .setup-section-title {
+      font-size: 0.95rem; font-weight: 700; color: #1F4E79;
+    }
+    .setup-section-body {
+      padding: 20px 24px;
+    }
+    .setup-label {
+      display: block;
+      font-size: 0.78rem; font-weight: 700; color: #555;
+      text-transform: uppercase; letter-spacing: 0.4px;
+      margin-bottom: 6px;
+    }
+    .setup-textarea {
+      width: 100%;
+      border: 1.5px solid #C5D8E8; border-radius: 6px;
+      padding: 10px 12px; font-size: 0.85rem; line-height: 1.55;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      resize: vertical; outline: none;
+      transition: border-color 0.15s;
+      color: #1A2530;
+    }
+    .setup-textarea:focus { border-color: #2E75B6; }
+    .setup-hint {
+      font-size: 0.78rem; color: #888; margin-top: 5px; line-height: 1.4;
+    }
+    .setup-actions {
+      display: flex; gap: 10px; align-items: center;
+      margin-top: 14px; flex-wrap: wrap;
+    }
+    .btn-save-setup {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: #2E75B6; color: #fff; border: none; border-radius: 6px;
+      padding: 9px 20px; font-size: 0.85rem; font-weight: 600;
+      cursor: pointer; transition: background 0.15s;
+    }
+    .btn-save-setup:hover { background: #1F4E79; }
+    .btn-save-setup:disabled { background: #A0BDD4; cursor: not-allowed; }
+    .btn-reset-prompt {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: transparent; color: #888;
+      border: 1.5px solid #CCC; border-radius: 6px;
+      padding: 8px 16px; font-size: 0.82rem; font-weight: 600;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .btn-reset-prompt:hover { background: #F5F5F5; }
+    .setup-save-msg {
+      font-size: 0.82rem;
+    }
+
+    .ai-status-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 16px;
+      background: #F7FAFD; border-radius: 8px;
+      border: 1px solid #E0E8F0;
+    }
+    .ai-status-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .ai-status-text { flex: 1; font-size: 0.87rem; color: #444; }
+
+    .ref-list { list-style: none; margin-bottom: 14px; }
+    .ref-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 12px;
+      background: #F7FAFD; border: 1px solid #E0E8F0;
+      border-radius: 6px; margin-bottom: 6px;
+      font-size: 0.85rem; color: #333;
+    }
+    .ref-item-icon { font-size: 1rem; }
+
+    .upload-ref-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .btn-upload-ref {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: transparent; color: #2E75B6;
+      border: 1.5px solid #2E75B6; border-radius: 6px;
+      padding: 8px 16px; font-size: 0.83rem; font-weight: 600;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .btn-upload-ref:hover { background: #EBF4FF; }
+    .upload-ref-msg { font-size: 0.82rem; color: #888; }
 
     /* ------------------------------------------------------------------ */
     /* Misc                                                                 */
@@ -453,10 +678,8 @@
       padding:7px 14px;font-size:0.8rem;font-weight:600;
       cursor:pointer;transition:background 0.15s;">
       <svg width="13" height="13" fill="none" viewBox="0 0 16 16">
-        <path d="M13.5 8A5.5 5.5 0 112.5 5.5" stroke="currentColor" stroke-width="2"
-              stroke-linecap="round"/>
-        <path d="M2.5 2v3.5H6" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-              stroke-linejoin="round"/>
+        <path d="M13.5 8A5.5 5.5 0 112.5 5.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        <path d="M2.5 2v3.5H6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
       Re-run AI
     </button>
@@ -499,7 +722,7 @@
       <p style="font-size:0.84rem;color:#555;margin-bottom:20px;line-height:1.5">
         Configure your Glean service to enable AI-powered AC synthesis.
         Without configuration the app uses rule-based extraction.<br>
-        <span style="font-size:0.78rem;color:#888">Settings are stored in memory for this session only.</span>
+        <span style="font-size:0.78rem;color:#888">Settings are stored in glean_config.json.</span>
       </p>
 
       <label style="display:block;font-size:0.78rem;font-weight:700;color:#555;
@@ -547,85 +770,297 @@
 </header>
 
 <!-- ====================================================================== -->
-<!-- Page content                                                            -->
+<!-- Tab navigation                                                          -->
 <!-- ====================================================================== -->
-<div class="page-wrapper">
-
-  <!-- Upload zone -->
-  <div id="upload-section" role="button" tabindex="0" aria-label="Upload .docx file">
-    <div class="upload-icon">
-      <svg width="52" height="52" fill="none" viewBox="0 0 52 52">
-        <circle cx="26" cy="26" r="26" fill="#EBF4FF"/>
-        <path d="M26 34V20M20 26l6-6 6 6" stroke="#2E75B6" stroke-width="2.5"
-              stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M18 36h16" stroke="#2E75B6" stroke-width="2.5" stroke-linecap="round"/>
-      </svg>
-    </div>
-    <h2 id="upload-title">Drop your test case document here</h2>
-    <p id="upload-subtitle">or click to browse for a <strong>.docx</strong> file</p>
-    <p class="hint" id="upload-hint">
-      Supports Word test-case documents with Requirement/Specification tables
-      and a Section&nbsp;9 Test Procedure table
-    </p>
-    <input type="file" id="file-input" accept=".docx" />
-  </div>
-
-  <!-- Notifications area -->
-  <div id="notifications"></div>
-
-  <!-- Loader -->
-  <div id="loader">
-    <div class="spinner"></div>
-    <p>Parsing document and generating acceptance criteria…</p>
-  </div>
-
-  <!-- Stats bar -->
-  <div id="stats-bar">
-    <div class="stat-item"><span class="val" id="stat-reqs">0</span><span class="lbl">Requirements</span></div>
-    <div class="stat-item"><span class="val" id="stat-specs">0</span><span class="lbl">Specifications</span></div>
-    <div class="stat-item"><span class="val" id="stat-steps">0</span><span class="lbl">Test Steps</span></div>
-    <div class="stat-item"><span class="val" id="stat-matched">0</span><span class="lbl">Matched</span></div>
-    <div class="stat-item"><span class="val" id="stat-unmatched">0</span><span class="lbl">Unmatched</span></div>
-  </div>
-
-  <!-- Filter / search bar -->
-  <div id="filter-bar">
-    <input type="search" id="search-input" placeholder="Search by ID or keyword…" />
-    <button class="filter-btn active" data-filter="all">All</button>
-    <button class="filter-btn" data-filter="Requirement">Requirements</button>
-    <button class="filter-btn" data-filter="Specification">Specifications</button>
-    <button class="filter-btn" data-filter="matched">Matched only</button>
-    <button class="filter-btn" data-filter="unmatched">Unmatched only</button>
-  </div>
-
-  <!-- Results area -->
-  <div id="results-section">
-    <div id="req-heading" class="section-heading hidden">Requirements</div>
-    <div class="results-grid" id="req-grid"></div>
-    <div id="spec-heading" class="section-heading hidden">Specifications</div>
-    <div class="results-grid" id="spec-grid"></div>
-  </div>
-
-  <!-- Empty state -->
-  <div id="empty-state">
-    <svg width="48" height="48" fill="none" viewBox="0 0 48 48">
-      <circle cx="24" cy="24" r="24" fill="#F0F4F8"/>
-      <path d="M16 28h16M16 20h10" stroke="#C0CBD6" stroke-width="2.5" stroke-linecap="round"/>
+<nav id="tab-nav">
+  <button class="tab-btn active" data-tab="ac">
+    <svg width="14" height="14" fill="none" viewBox="0 0 16 16">
+      <rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.6"/>
+      <path d="M5 6h6M5 9h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
     </svg>
-    <p>No results match the current filter.</p>
-  </div>
+    AC Builder
+  </button>
+  <button class="tab-btn" data-tab="review">
+    <svg width="14" height="14" fill="none" viewBox="0 0 16 16">
+      <circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.6"/>
+      <path d="M5.5 8l2 2 3-3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    TC Review
+  </button>
+  <button class="tab-btn" data-tab="setup">
+    <svg width="14" height="14" fill="none" viewBox="0 0 16 16">
+      <circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.6"/>
+      <path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.22 3.22l1.42 1.42M11.36 11.36l1.42 1.42M3.22 12.78l1.42-1.42M11.36 4.64l1.42-1.42" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+    </svg>
+    Setup
+  </button>
+</nav>
 
+<!-- ====================================================================== -->
+<!-- AC Builder tab                                                          -->
+<!-- ====================================================================== -->
+<div id="tab-ac" class="tab-content active">
+  <div class="page-wrapper">
+
+    <!-- Upload zone -->
+    <div id="upload-section" class="upload-zone" role="button" tabindex="0" aria-label="Upload .docx file">
+      <div class="upload-icon">
+        <svg width="52" height="52" fill="none" viewBox="0 0 52 52">
+          <circle cx="26" cy="26" r="26" fill="#EBF4FF"/>
+          <path d="M26 34V20M20 26l6-6 6 6" stroke="#2E75B6" stroke-width="2.5"
+                stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M18 36h16" stroke="#2E75B6" stroke-width="2.5" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <h2 id="upload-title">Drop your test case document here</h2>
+      <p id="upload-subtitle">or click to browse for a <strong>.docx</strong> file</p>
+      <p class="hint" id="upload-hint">
+        Supports Word test-case documents with Requirement/Specification tables
+        and a Section&nbsp;9 Test Procedure table
+      </p>
+      <input type="file" id="file-input" class="file-input-hidden" accept=".docx" />
+    </div>
+
+    <!-- Notifications area -->
+    <div id="notifications"></div>
+
+    <!-- Loader -->
+    <div id="loader" class="loader-block">
+      <div class="spinner"></div>
+      <p>Parsing document and generating acceptance criteria…</p>
+    </div>
+
+    <!-- Stats bar -->
+    <div id="stats-bar">
+      <div class="stat-item"><span class="val" id="stat-reqs">0</span><span class="lbl">Requirements</span></div>
+      <div class="stat-item"><span class="val" id="stat-specs">0</span><span class="lbl">Specifications</span></div>
+      <div class="stat-item"><span class="val" id="stat-steps">0</span><span class="lbl">Test Steps</span></div>
+      <div class="stat-item"><span class="val" id="stat-matched">0</span><span class="lbl">Matched</span></div>
+      <div class="stat-item"><span class="val" id="stat-unmatched">0</span><span class="lbl">Unmatched</span></div>
+    </div>
+
+    <!-- Filter / search bar -->
+    <div id="filter-bar">
+      <input type="search" id="search-input" placeholder="Search by ID or keyword…" />
+      <button class="filter-btn active" data-filter="all">All</button>
+      <button class="filter-btn" data-filter="Requirement">Requirements</button>
+      <button class="filter-btn" data-filter="Specification">Specifications</button>
+      <button class="filter-btn" data-filter="matched">Matched only</button>
+      <button class="filter-btn" data-filter="unmatched">Unmatched only</button>
+    </div>
+
+    <!-- Results area -->
+    <div id="results-section">
+      <div id="req-heading" class="section-heading hidden">Requirements</div>
+      <div class="results-grid" id="req-grid"></div>
+      <div id="spec-heading" class="section-heading hidden">Specifications</div>
+      <div class="results-grid" id="spec-grid"></div>
+    </div>
+
+    <!-- Empty state -->
+    <div id="empty-state" class="empty-state">
+      <svg width="48" height="48" fill="none" viewBox="0 0 48 48">
+        <circle cx="24" cy="24" r="24" fill="#F0F4F8"/>
+        <path d="M16 28h16M16 20h10" stroke="#C0CBD6" stroke-width="2.5" stroke-linecap="round"/>
+      </svg>
+      <p>No results match the current filter.</p>
+    </div>
+
+  </div>
 </div>
 
-<footer>SWT CAC Builder &nbsp;·&nbsp; python-docx parser &nbsp;·&nbsp; For internal use only</footer>
+<!-- ====================================================================== -->
+<!-- TC Review tab                                                           -->
+<!-- ====================================================================== -->
+<div id="tab-review" class="tab-content">
+  <div class="page-wrapper">
+
+    <!-- Upload zone for TC review -->
+    <div id="review-upload-section" class="upload-zone" role="button" tabindex="0"
+         aria-label="Upload test case for review">
+      <div class="upload-icon">
+        <svg width="52" height="52" fill="none" viewBox="0 0 52 52">
+          <circle cx="26" cy="26" r="26" fill="#E8F5E9"/>
+          <path d="M26 34V20M20 26l6-6 6 6" stroke="#538135" stroke-width="2.5"
+                stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M18 36h16" stroke="#538135" stroke-width="2.5" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <h2 id="review-upload-title">Drop the test case document here to review</h2>
+      <p id="review-upload-subtitle">or click to browse for a <strong>.docx</strong> file</p>
+      <p class="hint">Reviews against SOP-033 §5.3 and TMP-10005 Rev. B checklist</p>
+      <input type="file" id="review-file-input" class="file-input-hidden" accept=".docx" />
+    </div>
+
+    <!-- Notifications for review -->
+    <div id="review-notifications"></div>
+
+    <!-- Loader -->
+    <div id="review-loader" class="loader-block">
+      <div class="spinner"></div>
+      <p>Reviewing test case against SOP-033 §5.3 and TMP-10005 Rev. B…</p>
+    </div>
+
+    <!-- Review result panel -->
+    <div id="review-result-panel">
+
+      <!-- Overall card -->
+      <div class="review-overall-card">
+        <div class="review-overall-header">
+          <span id="review-overall-badge" class="review-status-badge status-pass">PASS</span>
+          <div>
+            <div class="review-filename" id="review-filename">—</div>
+            <div class="review-meta" id="review-meta">—</div>
+          </div>
+        </div>
+        <div class="review-summary" id="review-summary">—</div>
+      </div>
+
+      <!-- Section-by-section list -->
+      <div class="review-sections-header">Section Review</div>
+      <div id="review-sections-list"></div>
+
+    </div>
+
+  </div>
+</div>
+
+<!-- ====================================================================== -->
+<!-- Setup tab                                                               -->
+<!-- ====================================================================== -->
+<div id="tab-setup" class="tab-content">
+  <div class="page-wrapper">
+
+    <!-- ---- Glean AI connection ---- -->
+    <div class="setup-section">
+      <div class="setup-section-hdr">
+        <span class="setup-section-title">Glean AI Connection</span>
+      </div>
+      <div class="setup-section-body">
+        <div class="ai-status-row">
+          <span class="ai-status-dot" id="setup-ai-dot" style="background:#999"></span>
+          <span class="ai-status-text" id="setup-ai-text">Checking…</span>
+          <button onclick="openGleanModal()" style="
+            border:1.5px solid #2E75B6;background:#fff;color:#2E75B6;border-radius:6px;
+            padding:7px 16px;cursor:pointer;font-size:0.83rem;font-weight:600;
+            transition:background 0.15s;"
+            onmouseover="this.style.background='#EBF4FF'" onmouseout="this.style.background='#fff'">
+            Configure…
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ---- AC Generation Prompt ---- -->
+    <div class="setup-section">
+      <div class="setup-section-hdr">
+        <span class="setup-section-title">AC Generation Prompt</span>
+        <span style="font-size:0.78rem;color:#888">Customise the system instructions sent to Glean for every AC generation</span>
+      </div>
+      <div class="setup-section-body">
+        <label class="setup-label" for="setup-ac-prompt">System Instructions</label>
+        <textarea id="setup-ac-prompt" class="setup-textarea" rows="14"
+          placeholder="Loading default prompt…"></textarea>
+        <p class="setup-hint">
+          Leave blank or click <strong>Reset to Default</strong> to restore the built-in instructions.
+          Changes apply immediately to all subsequent generations.
+        </p>
+        <div class="setup-actions">
+          <button class="btn-save-setup" id="btn-save-ac-prompt" onclick="saveSetupConfig()">
+            <svg width="12" height="12" fill="none" viewBox="0 0 14 14">
+              <path d="M2 7.5l3.5 3.5 6.5-7" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Save
+          </button>
+          <button class="btn-reset-prompt" onclick="resetAcPrompt()">Reset to Default</button>
+          <span class="setup-save-msg" id="ac-prompt-msg"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ---- TC Review Extra Guidance ---- -->
+    <div class="setup-section">
+      <div class="setup-section-hdr">
+        <span class="setup-section-title">TC Review — Extra Guidance</span>
+        <span style="font-size:0.78rem;color:#888">Optional additional instructions appended to each review request</span>
+      </div>
+      <div class="setup-section-body">
+        <label class="setup-label" for="setup-review-guidance">Additional Reviewer Instructions</label>
+        <textarea id="setup-review-guidance" class="setup-textarea" rows="5"
+          placeholder="e.g. 'Pay particular attention to the risk control measures in Section 8' or 'Flag any acceptance criteria that are not quantitatively measurable'…"></textarea>
+        <p class="setup-hint">
+          These instructions are appended verbatim to the review prompt.
+          Leave blank to use the standard SOP-033 §5.3 checklist only.
+        </p>
+        <div class="setup-actions">
+          <button class="btn-save-setup" onclick="saveSetupConfig()">
+            <svg width="12" height="12" fill="none" viewBox="0 0 14 14">
+              <path d="M2 7.5l3.5 3.5 6.5-7" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Save
+          </button>
+          <span class="setup-save-msg" id="review-guidance-msg"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ---- Reference Documents ---- -->
+    <div class="setup-section">
+      <div class="setup-section-hdr">
+        <span class="setup-section-title">Reference Documents</span>
+        <span style="font-size:0.78rem;color:#888">Documents in the <code>references/</code> folder used to build the review checklist</span>
+      </div>
+      <div class="setup-section-body">
+        <ul class="ref-list" id="ref-list">
+          <li style="font-size:0.85rem;color:#AAA;padding:6px 0">Loading…</li>
+        </ul>
+        <div class="upload-ref-row">
+          <button class="btn-upload-ref" onclick="document.getElementById('ref-file-input').click()">
+            <svg width="13" height="13" fill="none" viewBox="0 0 16 16">
+              <path d="M8 12V4M4 8l4-4 4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Upload Reference Doc
+          </button>
+          <input type="file" id="ref-file-input" class="file-input-hidden" accept=".docx,.pdf,.doc" />
+          <span class="upload-ref-msg" id="ref-upload-msg"></span>
+        </div>
+        <p class="setup-hint" style="margin-top:10px">
+          Accepted formats: .docx, .pdf, .doc. The review checklist is currently derived from
+          <strong>SOP-033 Rev. I</strong> §5.3 and <strong>TMP-10005 Rev. B</strong>.
+        </p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<footer>SWT CAC Builder &nbsp;·&nbsp; SOP-033 §5.3 / TMP-10005 Rev. B &nbsp;·&nbsp; For internal use only</footer>
 
 <!-- ====================================================================== -->
 <!-- JavaScript                                                              -->
 <!-- ====================================================================== -->
 <script>
-// ---------------------------------------------------------------------------
+// ===========================================================================
+// Tab navigation
+// ===========================================================================
+const _tabBtns     = document.querySelectorAll('.tab-btn');
+const _tabContents = document.querySelectorAll('.tab-content');
+
+function switchTab(tabId) {
+  _tabBtns.forEach(b => b.classList.toggle('active', b.dataset.tab === tabId));
+  _tabContents.forEach(c => {
+    c.classList.toggle('active', c.id === 'tab-' + tabId);
+  });
+  if (tabId === 'setup') loadSetupConfig();
+}
+
+_tabBtns.forEach(btn => btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
+
+// ===========================================================================
 // Export
-// ---------------------------------------------------------------------------
+// ===========================================================================
 function triggerExport(format) {
   if (!Object.keys(_allResults).length) {
     showError('No results to export. Please upload a document first.');
@@ -642,10 +1077,11 @@ function triggerExport(format) {
       if (!resp.ok) {
         return resp.json().then(d => { throw new Error(d.error || 'Export failed.'); });
       }
-      // Extract filename from Content-Disposition header if present
       const cd = resp.headers.get('Content-Disposition') || '';
       const match = cd.match(/filename[^;=\n]*=["']?([^"';\n]+)/);
-      const filename = match ? match[1].trim() : (format === 'excel' ? 'acceptance_criteria.xlsx' : 'acceptance_criteria.docx');
+      const filename = match ? match[1].trim()
+                             : (format === 'excel' ? 'acceptance_criteria.xlsx'
+                                                   : 'acceptance_criteria.docx');
       return resp.blob().then(blob => ({ blob, filename }));
     })
     .then(({ blob, filename }) => {
@@ -664,9 +1100,9 @@ function triggerExport(format) {
     });
 }
 
-// ---------------------------------------------------------------------------
+// ===========================================================================
 // AI status & Glean config modal
-// ---------------------------------------------------------------------------
+// ===========================================================================
 let _savedGleanConfig = { url: '', api_key: '' };
 
 function refreshAiStatus() {
@@ -685,6 +1121,16 @@ function refreshAiStatus() {
         document.getElementById('ai-badge').title = 'Click to configure Glean AI';
       }
       _savedGleanConfig = { url: d.glean_url || '', api_key: d.api_key || '' };
+
+      // Also update Setup tab status row if visible
+      const setupDot  = document.getElementById('setup-ai-dot');
+      const setupText = document.getElementById('setup-ai-text');
+      if (setupDot && setupText) {
+        setupDot.style.background = d.ai_active ? '#70AD47' : '#F4A460';
+        setupText.textContent = d.ai_active
+          ? `Connected — ${d.glean_url}`
+          : 'Glean not configured — rule-based fallback is active.';
+      }
     })
     .catch(() => {});
 }
@@ -715,7 +1161,6 @@ function testGleanConnection() {
     return;
   }
 
-  // Save first so the backend has the values, then test
   const btn = document.getElementById('btn-test-conn');
   btn.disabled = true;
   btn.textContent = 'Testing…';
@@ -729,8 +1174,7 @@ function testGleanConnection() {
   .then(d => {
     if (!d.success) {
       setModalMsg(d.error || 'Could not save config.', true);
-      btn.disabled = false;
-      btn.textContent = 'Test Connection';
+      btn.disabled = false; btn.textContent = 'Test Connection';
       return;
     }
     return fetch('/test-connection', {method: 'POST'}).then(r => r.json());
@@ -738,14 +1182,12 @@ function testGleanConnection() {
   .then(d => {
     if (!d) return;
     setModalMsg(d.message, !d.ok);
-    btn.disabled = false;
-    btn.textContent = 'Test Connection';
+    btn.disabled = false; btn.textContent = 'Test Connection';
     if (d.ok) refreshAiStatus();
   })
   .catch(err => {
     setModalMsg(`Request failed: ${err.message}`, true);
-    btn.disabled = false;
-    btn.textContent = 'Test Connection';
+    btn.disabled = false; btn.textContent = 'Test Connection';
   });
 }
 
@@ -757,8 +1199,7 @@ function saveGleanConfig() {
   if (!key) { setModalMsg('API key is required.', true); return; }
 
   const btn = document.getElementById('btn-save-config');
-  btn.disabled = true;
-  btn.textContent = 'Saving…';
+  btn.disabled = true; btn.textContent = 'Saving…';
 
   fetch('/configure', {
     method: 'POST',
@@ -767,133 +1208,97 @@ function saveGleanConfig() {
   })
   .then(r => r.json())
   .then(d => {
-    btn.disabled = false;
-    btn.textContent = 'Save Configuration';
+    btn.disabled = false; btn.textContent = 'Save Configuration';
     setModalMsg(d.message || (d.success ? 'Saved.' : d.error), !d.success);
-    if (d.success) {
-      refreshAiStatus();
-      setTimeout(closeGleanModal, 1200);
-    }
+    if (d.success) { refreshAiStatus(); setTimeout(closeGleanModal, 1200); }
   })
   .catch(err => {
-    btn.disabled = false;
-    btn.textContent = 'Save Configuration';
+    btn.disabled = false; btn.textContent = 'Save Configuration';
     setModalMsg(`Request failed: ${err.message}`, true);
   });
 }
 
 document.getElementById('ai-badge').addEventListener('click', openGleanModal);
-
-// Close modal on backdrop click
 document.getElementById('api-modal').addEventListener('click', e => {
   if (e.target === document.getElementById('api-modal')) closeGleanModal();
 });
 
-// Check AI status on load
 refreshAiStatus();
 
-// ---------------------------------------------------------------------------
-// State
-// ---------------------------------------------------------------------------
-let _allResults = {};   // raw results from /upload
-let _activeFilter = 'all';
+// ===========================================================================
+// AC Builder — state
+// ===========================================================================
+let _allResults    = {};
+let _activeFilter  = 'all';
 let _searchQuery   = '';
 
-// ---------------------------------------------------------------------------
-// DOM refs
-// ---------------------------------------------------------------------------
-const uploadSection = document.getElementById('upload-section');
-const fileInput     = document.getElementById('file-input');
-const notifications = document.getElementById('notifications');
-const loader        = document.getElementById('loader');
-const statsBar      = document.getElementById('stats-bar');
-const filterBar     = document.getElementById('filter-bar');
-const resultsSection= document.getElementById('results-section');
-const emptyState    = document.getElementById('empty-state');
-const exportBar     = document.getElementById('export-bar');
-const searchInput   = document.getElementById('search-input');
-const reqGrid       = document.getElementById('req-grid');
-const specGrid      = document.getElementById('spec-grid');
-const reqHeading    = document.getElementById('req-heading');
-const specHeading   = document.getElementById('spec-heading');
+const uploadSection  = document.getElementById('upload-section');
+const fileInput      = document.getElementById('file-input');
+const notifications  = document.getElementById('notifications');
+const loader         = document.getElementById('loader');
+const statsBar       = document.getElementById('stats-bar');
+const filterBar      = document.getElementById('filter-bar');
+const resultsSection = document.getElementById('results-section');
+const emptyState     = document.getElementById('empty-state');
+const exportBar      = document.getElementById('export-bar');
+const searchInput    = document.getElementById('search-input');
+const reqGrid        = document.getElementById('req-grid');
+const specGrid       = document.getElementById('spec-grid');
+const reqHeading     = document.getElementById('req-heading');
+const specHeading    = document.getElementById('spec-heading');
 
-// ---------------------------------------------------------------------------
-// Upload handling
-// ---------------------------------------------------------------------------
-uploadSection.addEventListener('click', () => fileInput.click());
-uploadSection.addEventListener('keydown', e => {
-  if (e.key === 'Enter' || e.key === ' ') fileInput.click();
-});
-
-uploadSection.addEventListener('dragover', e => {
-  e.preventDefault();
-  uploadSection.classList.add('drag-over');
-});
+// ===========================================================================
+// AC Builder — upload handling
+// ===========================================================================
+uploadSection.addEventListener('click',  () => fileInput.click());
+uploadSection.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') fileInput.click(); });
+uploadSection.addEventListener('dragover',  e => { e.preventDefault(); uploadSection.classList.add('drag-over'); });
 uploadSection.addEventListener('dragleave', () => uploadSection.classList.remove('drag-over'));
 uploadSection.addEventListener('drop', e => {
-  e.preventDefault();
-  uploadSection.classList.remove('drag-over');
-  const files = e.dataTransfer.files;
-  if (files.length) processFile(files[0]);
+  e.preventDefault(); uploadSection.classList.remove('drag-over');
+  if (e.dataTransfer.files.length) processFile(e.dataTransfer.files[0]);
 });
-
-fileInput.addEventListener('change', () => {
-  if (fileInput.files.length) processFile(fileInput.files[0]);
-});
+fileInput.addEventListener('change', () => { if (fileInput.files.length) processFile(fileInput.files[0]); });
 
 function processFile(file) {
   if (!file.name.toLowerCase().endsWith('.docx')) {
-    showError('Only .docx files are supported.');
-    return;
+    showError('Only .docx files are supported.'); return;
   }
 
-  // Update upload zone appearance
   uploadSection.classList.add('has-file');
-  document.getElementById('upload-title').textContent = file.name;
+  document.getElementById('upload-title').textContent    = file.name;
   document.getElementById('upload-subtitle').textContent = 'Processing…';
   document.getElementById('upload-hint').textContent =
     `${(file.size / 1024).toFixed(1)} KB · Click or drop a different file to replace`;
 
-  // Clear previous state
   notifications.innerHTML = '';
   statsBar.classList.remove('visible');
   filterBar.classList.remove('visible');
   resultsSection.classList.remove('visible');
   emptyState.classList.remove('visible');
   exportBar.classList.remove('visible');
-  reqGrid.innerHTML = '';
+  reqGrid.innerHTML  = '';
   specGrid.innerHTML = '';
-
-  // Show loader
   loader.classList.add('visible');
 
-  const formData = new FormData();
-  formData.append('file', file);
+  const fd = new FormData();
+  fd.append('file', file);
 
-  fetch('/upload', { method: 'POST', body: formData })
+  fetch('/upload', { method: 'POST', body: fd })
     .then(r => r.json())
     .then(data => {
       loader.classList.remove('visible');
-      if (data.success) {
-        onSuccess(data);
-      } else {
-        onError(data.errors || ['Unknown error'], data.warnings || []);
-      }
+      if (data.success) onSuccess(data);
+      else              onError(data.errors || ['Unknown error'], data.warnings || []);
     })
-    .catch(err => {
-      loader.classList.remove('visible');
-      onError([`Network error: ${err.message}`], []);
-    });
+    .catch(err => { loader.classList.remove('visible'); onError([`Network error: ${err.message}`], []); });
 }
 
 function onSuccess(data) {
   document.getElementById('upload-subtitle').textContent =
     'Parsed successfully · Click or drop to load a different file';
-
-  // Show warnings
   (data.warnings || []).forEach(w => showWarning(w));
 
-  // Update stats
   const s = data.stats;
   document.getElementById('stat-reqs').textContent     = s.requirements;
   document.getElementById('stat-specs').textContent    = s.specifications;
@@ -902,7 +1307,6 @@ function onSuccess(data) {
   document.getElementById('stat-unmatched').textContent= s.unmatched;
   statsBar.classList.add('visible');
 
-  // Store results and render
   _allResults = data.results;
   filterBar.classList.add('visible');
   resultsSection.classList.add('visible');
@@ -911,38 +1315,30 @@ function onSuccess(data) {
 }
 
 function onError(errors, warnings) {
-  document.getElementById('upload-subtitle').textContent =
-    'Error – click or drop to try again';
+  document.getElementById('upload-subtitle').textContent = 'Error – click or drop to try again';
   uploadSection.classList.remove('has-file');
   errors.forEach(e => showError(e));
   warnings.forEach(w => showWarning(w));
 }
 
-// ---------------------------------------------------------------------------
-// Render results
-// ---------------------------------------------------------------------------
+// ===========================================================================
+// AC Builder — render
+// ===========================================================================
 function renderResults() {
   const query = _searchQuery.toLowerCase();
-
-  const reqItems  = [];
-  const specItems = [];
+  const reqItems = [], specItems = [];
 
   for (const [num, item] of Object.entries(_allResults)) {
-    // Apply type filter
     if (_activeFilter === 'Requirement'   && item.item_type !== 'Requirement')   continue;
     if (_activeFilter === 'Specification' && item.item_type !== 'Specification') continue;
-    if (_activeFilter === 'matched'   && item.unmatched)   continue;
-    if (_activeFilter === 'unmatched' && !item.unmatched)  continue;
-
-    // Apply search filter
+    if (_activeFilter === 'matched'   && item.unmatched)  continue;
+    if (_activeFilter === 'unmatched' && !item.unmatched) continue;
     if (query) {
-      const haystack = [num, item.description, item.generated_ac, item.existing_ac]
-                         .join(' ').toLowerCase();
-      if (!haystack.includes(query)) continue;
+      const h = [num, item.description, item.generated_ac, item.existing_ac].join(' ').toLowerCase();
+      if (!h.includes(query)) continue;
     }
-
-    if (item.item_type === 'Requirement')   reqItems.push([num, item]);
-    else                                     specItems.push([num, item]);
+    if (item.item_type === 'Requirement') reqItems.push([num, item]);
+    else                                   specItems.push([num, item]);
   }
 
   reqGrid.innerHTML  = '';
@@ -962,13 +1358,12 @@ function renderResults() {
     specHeading.classList.add('hidden');
   }
 
-  const total = reqItems.length + specItems.length;
-  emptyState.classList.toggle('visible', total === 0);
+  emptyState.classList.toggle('visible', reqItems.length + specItems.length === 0);
 }
 
-// ---------------------------------------------------------------------------
-// Build a single AC card
-// ---------------------------------------------------------------------------
+// ===========================================================================
+// AC Builder — build a single card
+// ===========================================================================
 function buildCard(num, item) {
   const card = document.createElement('div');
   card.className = 'ac-card' + (item.unmatched ? ' unmatched' : '');
@@ -980,18 +1375,15 @@ function buildCard(num, item) {
   const badgeLabel = item.item_type === 'Requirement' ? 'REQ' : 'SPEC';
 
   const stepsHtml = item.matching_steps.length
-    ? item.matching_steps.map(s =>
-        `<span class="step-pill">Step ${escHtml(s.step_id)}</span>`
-      ).join('')
+    ? item.matching_steps.map(s => `<span class="step-pill">Step ${escHtml(s.step_id)}</span>`).join('')
     : '<span style="font-size:0.75rem;color:#999">None found</span>';
 
-  const acText = item.generated_ac || '';
+  const acText       = item.generated_ac || '';
   const acPlaceholder = item.unmatched
     ? 'No matching test steps found — enter acceptance criteria manually.'
     : 'Generating…';
-  const acBoxClass = 'ac-text-box' + (item.unmatched ? ' unmatched-box' : '');
+  const acBoxClass   = 'ac-text-box' + (item.unmatched ? ' unmatched-box' : '');
 
-  // Build steps detail HTML
   let stepsDetailHtml = '';
   if (item.matching_steps.length) {
     stepsDetailHtml = `<div class="panel-title">Matched Test Steps</div>`;
@@ -1020,7 +1412,7 @@ function buildCard(num, item) {
       <div class="label-row">
         <span class="field-label">Acceptance Criteria
           <span style="font-size:0.68rem;font-weight:400;color:#AAA;text-transform:none;
-                       letter-spacing:0;margin-left:5px">— click to edit</span>
+                       letter-spacing:0;margin-left:5px">— click Edit to modify</span>
         </span>
         ${item.ai_generated
           ? `<span class="ac-source-badge" style="font-size:0.68rem;font-weight:700;padding:2px 8px;
@@ -1088,7 +1480,7 @@ function buildCard(num, item) {
         AI Prompt — optional guidance
       </div>
       <textarea class="ai-prompt-input" id="aiprompt-${escHtml(num)}"
-        placeholder="Leave blank to generate from test evidence only, or add specific guidance — e.g. 'focus on timing constraints' or 'emphasise the safety interlock condition'…"
+        placeholder="Leave blank to generate from test evidence only, or add specific guidance…"
         rows="2"></textarea>
       <div class="ai-panel-actions">
         <button class="btn-generate-ac" data-num="${escHtml(num)}">
@@ -1109,7 +1501,7 @@ function buildCard(num, item) {
   `;
 
   // Wire Edit / Save toggle
-  const acArea     = card.querySelector(`#ac-${CSS.escape(num)}`);
+  const acArea      = card.querySelector(`#ac-${CSS.escape(num)}`);
   const editSaveBtn = card.querySelector('.btn-edit-save');
 
   if (acArea && editSaveBtn) {
@@ -1117,12 +1509,11 @@ function buildCard(num, item) {
       acArea.readOnly = false;
       acArea.classList.add('editing');
       acArea.focus();
-      // Move caret to end
       acArea.setSelectionRange(acArea.value.length, acArea.value.length);
       editSaveBtn.dataset.mode = 'save';
-      editSaveBtn.style.background    = '#538135';
-      editSaveBtn.style.color         = '#fff';
-      editSaveBtn.style.borderColor   = '#538135';
+      editSaveBtn.style.background  = '#538135';
+      editSaveBtn.style.color       = '#fff';
+      editSaveBtn.style.borderColor = '#538135';
       editSaveBtn.innerHTML = `
         <svg width="12" height="12" fill="none" viewBox="0 0 14 14">
           <path d="M2 7.5l3.5 3.5 6.5-7" stroke="currentColor" stroke-width="2"
@@ -1182,9 +1573,8 @@ function buildCard(num, item) {
   const copyBtn = card.querySelector('.btn-copy');
   if (copyBtn) {
     copyBtn.addEventListener('click', () => {
-      const targetId = copyBtn.dataset.target;
-      const el       = document.getElementById(targetId);
-      const text     = el ? (el.value ?? el.textContent) : '';
+      const el   = document.getElementById(copyBtn.dataset.target);
+      const text = el ? (el.value ?? el.textContent) : '';
       navigator.clipboard.writeText(text).then(() => {
         copyBtn.classList.add('copied');
         copyBtn.innerHTML = `
@@ -1203,18 +1593,12 @@ function buildCard(num, item) {
             Copy AC`;
         }, 2000);
       }).catch(() => {
-        // Fallback for HTTP (non-HTTPS) environments
-        const el2 = document.getElementById(targetId);
-        if (el2 && el2.tagName === 'TEXTAREA') {
-          el2.select();
-          document.execCommand('copy');
-          el2.blur();
-        }
+        if (el && el.tagName === 'TEXTAREA') { el.select(); document.execCommand('copy'); el.blur(); }
       });
     });
   }
 
-  // Wire expand button
+  // Wire expand steps button
   const expandBtn = card.querySelector('.btn-expand');
   if (expandBtn) {
     expandBtn.addEventListener('click', () => {
@@ -1250,10 +1634,7 @@ function buildCard(num, item) {
   if (cancelAiBtn && aiPanel) {
     cancelAiBtn.addEventListener('click', () => {
       aiPanel.classList.remove('open');
-      if (aiRegenBtn) {
-        aiRegenBtn.style.background = 'transparent';
-        aiRegenBtn.style.color      = '#F0A500';
-      }
+      if (aiRegenBtn) { aiRegenBtn.style.background = 'transparent'; aiRegenBtn.style.color = '#F0A500'; }
       if (aiStatus) aiStatus.textContent = '';
     });
   }
@@ -1287,27 +1668,19 @@ function buildCard(num, item) {
           return;
         }
 
-        // Update textarea and in-memory state
-        if (acArea) {
-          acArea.value = data.generated_ac || '';
-          acArea.readOnly = true;
-          acArea.classList.remove('editing');
-        }
+        if (acArea) { acArea.value = data.generated_ac || ''; acArea.readOnly = true; acArea.classList.remove('editing'); }
         _allResults[num].generated_ac = data.generated_ac || '';
-        _allResults[num].ai_generated = data.ai_generated;
+        _allResults[num].ai_generated  = data.ai_generated;
 
-        // Update AI badge on card
         const badgeEl = card.querySelector('.ac-source-badge');
         if (badgeEl) {
-          badgeEl.textContent   = data.ai_generated ? '✦ AI' : 'rule-based';
+          badgeEl.textContent        = data.ai_generated ? '✦ AI' : 'rule-based';
           badgeEl.style.background   = data.ai_generated ? '#E8F5E9' : 'transparent';
           badgeEl.style.color        = data.ai_generated ? '#2E7D32' : '#AAA';
           badgeEl.style.border       = data.ai_generated ? '1px solid #A5D6A7' : 'none';
         }
-
-        // Reset edit/save button to Edit mode
         if (editSaveBtn) {
-          editSaveBtn.dataset.mode      = 'edit';
+          editSaveBtn.dataset.mode = 'edit';
           editSaveBtn.style.background  = 'transparent';
           editSaveBtn.style.color       = '#2E75B6';
           editSaveBtn.style.borderColor = '#2E75B6';
@@ -1317,13 +1690,8 @@ function buildCard(num, item) {
                     stroke-linecap="round" stroke-linejoin="round"/>
             </svg> Edit`;
         }
-
-        // Collapse panel and restore button
         aiPanel.classList.remove('open');
-        if (aiRegenBtn) {
-          aiRegenBtn.style.background = 'transparent';
-          aiRegenBtn.style.color      = '#F0A500';
-        }
+        if (aiRegenBtn) { aiRegenBtn.style.background = 'transparent'; aiRegenBtn.style.color = '#F0A500'; }
         if (promptInput) promptInput.value = '';
       })
       .catch(err => {
@@ -1340,19 +1708,14 @@ function buildCard(num, item) {
   return card;
 }
 
-// ---------------------------------------------------------------------------
-// Regenerate with AI
-// ---------------------------------------------------------------------------
+// ===========================================================================
+// AC Builder — regenerate all
+// ===========================================================================
 function regenerateWithAI() {
   const btn = document.getElementById('btn-regen');
-
-  // Must have results loaded
   if (!Object.keys(_allResults).length) {
-    showError('No document loaded. Please upload a file first.');
-    return;
+    showError('No document loaded. Please upload a file first.'); return;
   }
-
-  // Disable button and show spinner state
   btn.disabled = true;
   btn.innerHTML = `
     <svg width="14" height="14" viewBox="0 0 14 14" fill="none"
@@ -1361,7 +1724,6 @@ function regenerateWithAI() {
     </svg>
     Generating…`;
   btn.style.background = '#B07800';
-
   notifications.innerHTML = '';
 
   fetch('/regenerate', { method: 'POST' })
@@ -1370,23 +1732,14 @@ function regenerateWithAI() {
       btn.disabled = false;
       btn.innerHTML = `
         <svg width="14" height="14" fill="none" viewBox="0 0 16 16">
-          <path d="M13.5 8A5.5 5.5 0 112.5 5.5" stroke="currentColor" stroke-width="2"
-                stroke-linecap="round"/>
-          <path d="M2.5 2v3.5H6" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                stroke-linejoin="round"/>
+          <path d="M13.5 8A5.5 5.5 0 112.5 5.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <path d="M2.5 2v3.5H6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
-        Regenerate with AI`;
-      btn.style.background = '#F0A500';
-
-      if (!data.success) {
-        showError(data.error || 'Regeneration failed.');
-        return;
-      }
-
+        Re-run AI`;
+      btn.style.background = '';
+      if (!data.success) { showError(data.error || 'Regeneration failed.'); return; }
       _allResults = data.results;
       renderResults();
-
-      // Notify how many items were AI-generated
       const msg = document.createElement('div');
       msg.className = 'banner banner-warning';
       msg.style.cssText = 'background:#E8F5E9;border-color:#A5D6A7;color:#1B5E20';
@@ -1396,23 +1749,20 @@ function regenerateWithAI() {
       setTimeout(() => msg.remove(), 6000);
     })
     .catch(err => {
-      btn.disabled = false;
-      btn.style.background = '#F0A500';
+      btn.disabled = false; btn.style.background = '';
       btn.innerHTML = `
         <svg width="14" height="14" fill="none" viewBox="0 0 16 16">
-          <path d="M13.5 8A5.5 5.5 0 112.5 5.5" stroke="currentColor" stroke-width="2"
-                stroke-linecap="round"/>
-          <path d="M2.5 2v3.5H6" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                stroke-linejoin="round"/>
+          <path d="M13.5 8A5.5 5.5 0 112.5 5.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <path d="M2.5 2v3.5H6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
-        Regenerate with AI`;
+        Re-run AI`;
       showError(`Request failed: ${err.message}`);
     });
 }
 
-// ---------------------------------------------------------------------------
-// Filter / search
-// ---------------------------------------------------------------------------
+// ===========================================================================
+// AC Builder — filter / search
+// ===========================================================================
 document.querySelectorAll('.filter-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
@@ -1427,9 +1777,9 @@ searchInput.addEventListener('input', () => {
   renderResults();
 });
 
-// ---------------------------------------------------------------------------
+// ===========================================================================
 // Notification helpers
-// ---------------------------------------------------------------------------
+// ===========================================================================
 function showError(msg) {
   const div = document.createElement('div');
   div.className = 'banner banner-error';
@@ -1444,9 +1794,287 @@ function showWarning(msg) {
   notifications.appendChild(div);
 }
 
-// ---------------------------------------------------------------------------
+// ===========================================================================
+// TC Review tab
+// ===========================================================================
+const reviewUpload  = document.getElementById('review-upload-section');
+const reviewInput   = document.getElementById('review-file-input');
+const reviewLoader  = document.getElementById('review-loader');
+const reviewNotif   = document.getElementById('review-notifications');
+const reviewPanel   = document.getElementById('review-result-panel');
+
+reviewUpload.addEventListener('click',  () => reviewInput.click());
+reviewUpload.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') reviewInput.click(); });
+reviewUpload.addEventListener('dragover',  e => { e.preventDefault(); reviewUpload.classList.add('drag-over'); });
+reviewUpload.addEventListener('dragleave', () => reviewUpload.classList.remove('drag-over'));
+reviewUpload.addEventListener('drop', e => {
+  e.preventDefault(); reviewUpload.classList.remove('drag-over');
+  if (e.dataTransfer.files.length) submitReview(e.dataTransfer.files[0]);
+});
+reviewInput.addEventListener('change', () => {
+  if (reviewInput.files.length) submitReview(reviewInput.files[0]);
+});
+
+function submitReview(file) {
+  if (!file.name.toLowerCase().endsWith('.docx')) {
+    showReviewError('Only .docx files are supported.'); return;
+  }
+
+  reviewUpload.classList.add('has-file');
+  document.getElementById('review-upload-title').textContent    = file.name;
+  document.getElementById('review-upload-subtitle').textContent = 'Reviewing…';
+  reviewNotif.innerHTML = '';
+  reviewPanel.classList.remove('visible');
+  reviewLoader.classList.add('visible');
+
+  const fd = new FormData();
+  fd.append('file', file);
+
+  fetch('/review-tc', { method: 'POST', body: fd })
+    .then(r => r.json())
+    .then(data => {
+      reviewLoader.classList.remove('visible');
+      if (!data.success) {
+        showReviewError(data.error || 'Review failed.');
+        document.getElementById('review-upload-subtitle').textContent =
+          'Error — click or drop to try again';
+        reviewUpload.classList.remove('has-file');
+        return;
+      }
+      document.getElementById('review-upload-subtitle').textContent =
+        'Review complete · click or drop to review a different file';
+      renderReviewResult(data.result);
+    })
+    .catch(err => {
+      reviewLoader.classList.remove('visible');
+      showReviewError(`Network error: ${err.message}`);
+      reviewUpload.classList.remove('has-file');
+    });
+}
+
+function renderReviewResult(r) {
+  // Overall badge
+  const overallBadge = document.getElementById('review-overall-badge');
+  const overallMap = {
+    'PASS':            ['PASS',            'status-pass'],
+    'REVIEW REQUIRED': ['REVIEW REQUIRED', 'status-review'],
+    'FAIL':            ['FAIL',            'status-fail'],
+    'ERROR':           ['ERROR',           'status-error'],
+  };
+  const [label, cls] = overallMap[r.overall] || ['UNKNOWN', 'status-error'];
+  overallBadge.textContent = label;
+  overallBadge.className   = `review-status-badge ${cls}`;
+
+  document.getElementById('review-filename').textContent =
+    r.filename || 'Unknown file';
+  document.getElementById('review-meta').textContent =
+    r.tc_chars ? `${r.tc_chars.toLocaleString()} characters extracted` : '';
+  document.getElementById('review-summary').textContent =
+    r.summary || '—';
+
+  // Sections list
+  const list = document.getElementById('review-sections-list');
+  list.innerHTML = '';
+
+  if (!r.sections || !r.sections.length) {
+    list.innerHTML = '<p style="color:#888;font-size:0.85rem;padding:8px 0">No section data returned.</p>';
+  } else {
+    // Tally
+    const counts = { pass: 0, warning: 0, fail: 0 };
+    r.sections.forEach(s => { if (counts[s.status] !== undefined) counts[s.status]++; });
+
+    const tally = document.createElement('p');
+    tally.style.cssText = 'font-size:0.82rem;color:#888;margin-bottom:12px';
+    tally.innerHTML =
+      `<span style="color:#1B5E20;font-weight:700">${counts.pass} pass</span> &nbsp;·&nbsp; ` +
+      `<span style="color:#6B4900;font-weight:700">${counts.warning} warning</span> &nbsp;·&nbsp; ` +
+      `<span style="color:#C62828;font-weight:700">${counts.fail} fail</span>`;
+    list.appendChild(tally);
+
+    r.sections.forEach(sec => {
+      const iconMap    = { pass: '✓', warning: '⚠', fail: '✗' };
+      const iconColour = { pass: '#2E7D32', warning: '#E65100', fail: '#C62828' };
+      const cls        = { pass: 'sec-pass', warning: 'sec-warning', fail: 'sec-fail' };
+
+      const row = document.createElement('div');
+      row.className = 'review-section-row';
+
+      const hasFindings = sec.findings && sec.findings.length > 0;
+      const findingsHtml = hasFindings
+        ? sec.findings.map(f => `<div class="review-finding">${escHtml(f)}</div>`).join('')
+        : '<div class="review-finding" style="color:#888">No issues found.</div>';
+
+      row.innerHTML = `
+        <div class="review-section-hdr">
+          <span class="review-section-icon" style="color:${iconColour[sec.status] || '#888'}">
+            ${iconMap[sec.status] || '?'}
+          </span>
+          <span class="review-section-name">Section ${escHtml(sec.id)} — ${escHtml(sec.name)}</span>
+          <span class="review-section-status ${cls[sec.status] || ''}">${escHtml(sec.status)}</span>
+          <span class="review-section-chevron">▼</span>
+        </div>
+        <div class="review-section-body">${findingsHtml}</div>
+      `;
+
+      // Click to expand/collapse
+      row.querySelector('.review-section-hdr').addEventListener('click', () => {
+        row.classList.toggle('expanded');
+      });
+
+      // Auto-expand warnings and fails
+      if (sec.status === 'warning' || sec.status === 'fail') {
+        row.classList.add('expanded');
+      }
+
+      list.appendChild(row);
+    });
+  }
+
+  reviewPanel.classList.add('visible');
+  reviewPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function showReviewError(msg) {
+  const div = document.createElement('div');
+  div.className = 'banner banner-error';
+  div.innerHTML = `<strong>Error:</strong> ${escHtml(msg)}`;
+  reviewNotif.appendChild(div);
+}
+
+// ===========================================================================
+// Setup tab
+// ===========================================================================
+let _defaultAcPrompt = '';
+
+function loadSetupConfig() {
+  // Load AI status for Setup tab
+  fetch('/ai-status').then(r => r.json()).then(d => {
+    const dot  = document.getElementById('setup-ai-dot');
+    const text = document.getElementById('setup-ai-text');
+    if (dot && text) {
+      dot.style.background = d.ai_active ? '#70AD47' : '#F4A460';
+      text.textContent = d.ai_active
+        ? `Connected — ${d.glean_url}`
+        : 'Glean not configured — rule-based fallback is active.';
+    }
+  }).catch(() => {});
+
+  // Load setup config
+  fetch('/api/setup-config').then(r => r.json()).then(d => {
+    _defaultAcPrompt = d.default_ac_prompt || '';
+    const promptTA = document.getElementById('setup-ac-prompt');
+    if (promptTA) {
+      // Show the custom prompt if set; otherwise show the default
+      promptTA.value = d.ac_system_prompt || d.default_ac_prompt || '';
+    }
+    const guidanceTA = document.getElementById('setup-review-guidance');
+    if (guidanceTA) guidanceTA.value = d.review_extra_guidance || '';
+  }).catch(() => {});
+
+  // Load reference list
+  loadRefList();
+}
+
+function resetAcPrompt() {
+  const ta = document.getElementById('setup-ac-prompt');
+  if (ta) ta.value = _defaultAcPrompt;
+}
+
+function saveSetupConfig() {
+  const acPrompt  = (document.getElementById('setup-ac-prompt')?.value    || '').trim();
+  const guidance  = (document.getElementById('setup-review-guidance')?.value || '').trim();
+
+  const btns = document.querySelectorAll('.btn-save-setup');
+  btns.forEach(b => { b.disabled = true; b.textContent = 'Saving…'; });
+
+  fetch('/api/save-setup', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ ac_system_prompt: acPrompt, review_extra_guidance: guidance }),
+  })
+  .then(r => r.json())
+  .then(d => {
+    btns.forEach(b => {
+      b.disabled = false;
+      b.innerHTML = `
+        <svg width="12" height="12" fill="none" viewBox="0 0 14 14">
+          <path d="M2 7.5l3.5 3.5 6.5-7" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Save`;
+    });
+    const msgEls = document.querySelectorAll('.setup-save-msg');
+    msgEls.forEach(el => {
+      el.textContent = d.success ? 'Saved.' : (d.error || 'Error saving.');
+      el.style.color = d.success ? '#538135' : '#C00';
+      setTimeout(() => { el.textContent = ''; }, 3000);
+    });
+  })
+  .catch(err => {
+    btns.forEach(b => { b.disabled = false; b.innerHTML = `
+      <svg width="12" height="12" fill="none" viewBox="0 0 14 14">
+        <path d="M2 7.5l3.5 3.5 6.5-7" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Save`; });
+    const msgEls = document.querySelectorAll('.setup-save-msg');
+    msgEls.forEach(el => { el.textContent = `Error: ${err.message}`; el.style.color = '#C00'; });
+  });
+}
+
+function loadRefList() {
+  fetch('/api/references').then(r => r.json()).then(d => {
+    const ul = document.getElementById('ref-list');
+    if (!ul) return;
+    if (!d.files || !d.files.length) {
+      ul.innerHTML = '<li style="font-size:0.85rem;color:#AAA;padding:6px 0">No reference documents found in references/ folder.</li>';
+      return;
+    }
+    ul.innerHTML = d.files.map(f => `
+      <li class="ref-item">
+        <span class="ref-item-icon">📄</span>
+        <span>${escHtml(f)}</span>
+      </li>`).join('');
+  }).catch(() => {
+    const ul = document.getElementById('ref-list');
+    if (ul) ul.innerHTML = '<li style="font-size:0.85rem;color:#C00;padding:6px 0">Could not load reference list.</li>';
+  });
+}
+
+// Reference file upload
+document.getElementById('ref-file-input').addEventListener('change', function() {
+  if (!this.files.length) return;
+  const file = this.files[0];
+  const msgEl = document.getElementById('ref-upload-msg');
+  msgEl.textContent = `Uploading ${file.name}…`;
+  msgEl.style.color = '#888';
+
+  const fd = new FormData();
+  fd.append('file', file);
+
+  fetch('/api/upload-reference', { method: 'POST', body: fd })
+    .then(r => r.json())
+    .then(d => {
+      if (d.success) {
+        msgEl.textContent = `${d.filename} uploaded successfully.`;
+        msgEl.style.color = '#538135';
+        loadRefList();
+      } else {
+        msgEl.textContent = d.error || 'Upload failed.';
+        msgEl.style.color = '#C00';
+      }
+      setTimeout(() => { msgEl.textContent = ''; }, 4000);
+    })
+    .catch(err => {
+      msgEl.textContent = `Error: ${err.message}`;
+      msgEl.style.color = '#C00';
+    });
+  this.value = '';
+});
+
+// ===========================================================================
 // Utilities
-// ---------------------------------------------------------------------------
+// ===========================================================================
 function escHtml(str) {
   return String(str ?? '')
     .replace(/&/g, '&amp;')

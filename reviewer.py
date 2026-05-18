@@ -83,7 +83,10 @@ Rules:
 2. Severity: "fail" = mandatory content missing; "warning" = present but incomplete
    or unclear; "pass" = compliant.
 3. Only judge what is actually in the document — do not assume or infer missing content.
-4. Return ONLY a JSON object inside a ```json code block. No text outside the block.
+4. The document starts with a DOCUMENT SECTION MAP listing ALL headings present.
+   Use this map to determine whether a section exists — do NOT mark a section as
+   missing just because its body content was truncated from the extract.
+5. Return ONLY a JSON object inside a ```json code block. No text outside the block.
 
 JSON structure (strictly follow this schema):
 ```json
@@ -100,8 +103,8 @@ JSON structure (strictly follow this schema):
   ]
 }
 ```
-For any section not found in the document mark status "fail" with finding
-"Section not found in document."
+Only mark a section status "fail" with finding "Section not found in document." if
+that section heading does NOT appear in the DOCUMENT SECTION MAP.
 """
 
 
@@ -113,9 +116,14 @@ def extract_tc_text(docx_path: str) -> str:
     """
     Extract text from a TC .docx in document order (paragraphs and tables
     interleaved as they appear), preserving heading levels and table rows.
-    Truncates at 15 000 characters to stay within Glean context limits.
+
+    Strategy:
+    - Always prepend a SECTION MAP listing every heading found in the document
+      so the AI knows which sections exist even if body content is truncated.
+    - Body content is truncated at 40 000 characters.
     """
     doc = Document(docx_path)
+    headings: List[str] = []
     lines: List[str] = []
 
     def _para_text(element) -> None:
@@ -126,6 +134,7 @@ def extract_tc_text(docx_path: str) -> str:
             return
         style = p.style.name if p.style else ''
         if any(h in style for h in ('Heading', 'Title')):
+            headings.append(text)
             lines.append(f'\n### {text}')
         else:
             lines.append(text)
@@ -153,10 +162,21 @@ def extract_tc_text(docx_path: str) -> str:
         elif tag == 'tbl':
             _table_text(child)
 
-    full = '\n'.join(lines)
-    if len(full) > 15_000:
-        full = full[:15_000] + '\n\n[... document truncated at 15 000 chars ...]'
-    return full
+    # Build section map — always included regardless of truncation
+    section_map = ''
+    if headings:
+        section_map = (
+            'DOCUMENT SECTION MAP (all headings found in this document):\n'
+            + '\n'.join(f'  - {h}' for h in headings)
+            + '\n\nFULL DOCUMENT CONTENT:\n'
+        )
+
+    body = '\n'.join(lines)
+    limit = 40_000
+    if len(body) > limit:
+        body = body[:limit] + '\n\n[... document truncated at 40 000 chars ...]'
+
+    return section_map + body
 
 
 # ---------------------------------------------------------------------------

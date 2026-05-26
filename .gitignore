@@ -12,9 +12,8 @@ __pycache__/
 # Virtual environment (created by deploy.bat)
 venv/
 
-# Persisted config (contains API key — do not commit)
-glean_config.json
-setup_config.json
+# Persisted config — both committed; glean_config.json has URL only (no API key)
+# Re-enter the API key via the Setup tab on first run on a new machine.
 
 # OS
 .DS_Store

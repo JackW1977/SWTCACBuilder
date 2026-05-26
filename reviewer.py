@@ -104,6 +104,12 @@ Rules:
    Use this map to determine whether a section exists — do NOT mark a section as
    missing just because its body content was truncated from the extract.
 5. Return ONLY a JSON object inside a ```json code block. No text outside the block.
+6. NEVER include meta-commentary about the review process in findings. Findings must
+   describe document quality issues only — never mention the DOCUMENT SECTION MAP,
+   truncation, or the review methodology. If a section exists but its body was
+   truncated, either omit a finding for that section or note only what is verifiable
+   from the visible content. Do NOT write findings such as "this section appears in
+   the section map" or "content was not shown in the extract".
 
 JSON structure (strictly follow this schema):
 ```json

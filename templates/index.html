@@ -4,6 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Test Case Toolbox</title>
+  <!-- Vite HMR client — enables live reload in the Claude Code preview window.
+       Served by Vite at /@vite/client (bypassed by the proxy rule).
+       Silent 404 when the page is opened directly via Flask without Vite. -->
+  <script type="module" src="/@vite/client"></script>
   <style>
     /* ------------------------------------------------------------------ */
     /* Reset & base                                                         */
@@ -639,6 +643,17 @@
       font-size: 0.85rem; color: #333;
     }
     .ref-item-icon { font-size: 1rem; }
+    .ref-item-name { flex: 1; }
+    .btn-ref-delete {
+      margin-left: auto; flex-shrink: 0;
+      background: none; border: 1px solid transparent;
+      border-radius: 4px; padding: 2px 7px;
+      font-size: 0.78rem; color: #AAA; cursor: pointer;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+    .btn-ref-delete:hover {
+      background: #FFEBEE; color: #C62828; border-color: #FFCDD2;
+    }
 
     .upload-ref-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
     .btn-upload-ref {
@@ -2160,12 +2175,27 @@ function loadRefList() {
     ul.innerHTML = d.files.map(f => `
       <li class="ref-item">
         <span class="ref-item-icon">📄</span>
-        <span>${escHtml(f)}</span>
+        <span class="ref-item-name">${escHtml(f)}</span>
+        <button class="btn-ref-delete" onclick="deleteReference('${escHtml(f)}')" title="Remove">✕ Remove</button>
       </li>`).join('');
   }).catch(() => {
     const ul = document.getElementById('ref-list');
     if (ul) ul.innerHTML = '<li style="font-size:0.85rem;color:#C00;padding:6px 0">Could not load reference list.</li>';
   });
+}
+
+function deleteReference(filename) {
+  if (!confirm(`Remove "${filename}" from the references folder?`)) return;
+  fetch(`/api/references/${encodeURIComponent(filename)}`, { method: 'DELETE' })
+    .then(r => r.json())
+    .then(d => {
+      if (d.success) {
+        loadRefList();
+      } else {
+        alert(`Could not remove file: ${d.error || 'Unknown error'}`);
+      }
+    })
+    .catch(err => alert(`Error: ${err.message}`));
 }
 
 // Reference file upload

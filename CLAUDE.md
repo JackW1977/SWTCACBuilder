@@ -1,4 +1,4 @@
-# SWT CAC Builder — Claude Code Context
+# Test Case Toolbox — Claude Code Context
 
 ## What this app does
 Flask web app (single-user, local) that parses `.docx` software test-case
@@ -6,11 +6,28 @@ documents, maps each Requirement / Specification to its matched test procedure
 steps, and generates compressed statement-style Acceptance Criteria using the
 **Glean Chat API** (with a rule-based fallback when AI is not configured).
 
-## How to run locally
+## How to run / preview
+
+### One-command dev start (Claude Code preview)
 ```
-deploy.bat   # one-time: creates venv/, installs dependencies
-launch.bat   # start server at http://localhost:5000 and open browser
-stop.bat     # kill server on port 5000
+npm run dev
+```
+This single command starts **both** servers automatically:
+- Flask backend on **port 5000** (via the `vite-plugin-flask` in `vite.config.ts`)
+- Vite dev server on **port 5173** (proxies all requests to Flask)
+
+**Preview URL: http://localhost:5173**
+
+### Prerequisites (one-time setup)
+```
+deploy.bat   # creates venv/ and installs Python deps
+npm install  # installs Vite + TypeScript
+```
+
+### Other commands
+```
+stop.bat     # kill Flask on port 5000
+npm run build   # compile frontend assets → static/dist/
 ```
 
 ## File map
@@ -28,6 +45,11 @@ stop.bat     # kill server on port 5000
 | `glean_config.json` | **Gitignored** — persisted Glean URL + API key |
 | `setup_config.json` | **Gitignored** — persisted AC prompt + review extra guidance |
 | `references/` | SOP-033 Rev. I and TMP-10005 Rev. B source docs (and any user-added refs) |
+| `vite.config.ts` | Vite build config + `vite-plugin-flask` (auto-starts Flask on `npm run dev`) |
+| `package.json` | Node dev deps: `vite`, `typescript` |
+| `frontend/index.html` | Vite entry point (dev only — Flask/Jinja2 renders the real template) |
+| `frontend/main.ts` | JS bundle entry — grows as inline JS is extracted from `templates/index.html` |
+| `static/dist/` | Vite build output — referenced by Flask template in production |
 
 ## Architecture
 

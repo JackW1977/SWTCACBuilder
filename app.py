@@ -442,15 +442,44 @@ def api_save_setup():
 # Reference documents
 # ---------------------------------------------------------------------------
 
+_REFERENCE_EXTENSIONS = {'.docx', '.pdf', '.doc'}
+
 @app.route('/api/references', methods=['GET'])
 def api_references():
-    """List files in the references/ folder."""
+    """List user-uploaded reference documents in the references/ folder.
+    Only .docx / .pdf / .doc files are shown — auto-generated .txt extracts
+    and helper scripts are intentionally excluded.
+    """
     try:
-        files = [f for f in os.listdir(_REFERENCES_DIR) if not f.startswith('.')]
+        files = [
+            f for f in os.listdir(_REFERENCES_DIR)
+            if not f.startswith('.')
+            and os.path.splitext(f)[1].lower() in _REFERENCE_EXTENSIONS
+        ]
         files.sort()
         return jsonify({'files': files})
     except Exception as exc:
         return jsonify({'files': [], 'error': str(exc)})
+
+
+@app.route('/api/references/<path:filename>', methods=['DELETE'])
+def api_delete_reference(filename):
+    """Delete a file from the references/ folder."""
+    # Prevent path traversal — only allow a plain filename, no slashes
+    safe_name = os.path.basename(filename)
+    if not safe_name or safe_name != filename:
+        return jsonify({'success': False, 'error': 'Invalid filename.'}), 400
+    ext = os.path.splitext(safe_name)[1].lower()
+    if ext not in _REFERENCE_EXTENSIONS:
+        return jsonify({'success': False, 'error': 'File type not allowed.'}), 400
+    target = os.path.join(_REFERENCES_DIR, safe_name)
+    if not os.path.isfile(target):
+        return jsonify({'success': False, 'error': 'File not found.'}), 404
+    try:
+        os.remove(target)
+        return jsonify({'success': True, 'filename': safe_name})
+    except Exception as exc:
+        return jsonify({'success': False, 'error': str(exc)}), 500
 
 
 @app.route('/api/upload-reference', methods=['POST'])
